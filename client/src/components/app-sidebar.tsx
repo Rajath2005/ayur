@@ -18,21 +18,23 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Conversation } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function AppSidebar() {
   const [location, setLocation] = useLocation();
   const { toast } = useToast();
+  const { logout } = useAuth();
 
   const { data: conversations = [], isLoading } = useQuery<Conversation[]>({
     queryKey: ["/api/conversations"],
   });
 
-  const createConversationMutation = useMutation({
+  const createConversationMutation = useMutation<Conversation, Error, void>({
     mutationFn: async () => {
       const result = await apiRequest("POST", "/api/conversations", {
         title: "New Conversation",
       });
-      return result;
+      return result.json();
     },
     onSuccess: (newConversation: Conversation) => {
       queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
@@ -63,7 +65,7 @@ export function AppSidebar() {
 
   const handleLogout = async () => {
     try {
-      await apiRequest("POST", "/api/auth/logout", undefined);
+      await logout();
       setLocation("/");
       toast({
         title: "Logged out",
