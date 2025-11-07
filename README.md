@@ -46,21 +46,28 @@ A modern fullstack web application providing personalized Ayurvedic wellness gui
 
 3. **Set up environment variables**
 
-   Create a `.env` file in the root directory:
+   Create a `.env` file in the root directory with these exact variable names (Vite requires `VITE_` prefix for frontend variables):
+
    ```env
-   # Supabase Configuration
+   # Supabase Configuration (Frontend - VITE_ prefix required)
    VITE_SUPABASE_URL=https://your-project.supabase.co
    VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 
-   # AI Configuration
+   # AI Configuration (Backend)
    GEMINI_API_KEY=your_gemini_api_key
 
-   # Database (same as Supabase URL)
+   # Database Configuration (Backend)
    DATABASE_URL=postgresql://postgres:[password]@db.[project].supabase.co:5432/postgres
 
-   # Session Secret
+   # Session Secret (Backend)
    SESSION_SECRET=your_random_session_secret
    ```
+
+   **Important Notes:**
+   - ✅ Place `.env` file in the **root directory** of the project
+   - ✅ Frontend variables MUST have `VITE_` prefix to be accessible in React
+   - ✅ After editing `.env`, **restart the development server** (`npm run dev`) for changes to take effect
+   - ✅ Vite does NOT support `process.env` in frontend code - use `import.meta.env` instead
 
    **How to get Supabase credentials:**
    - Go to [Supabase Dashboard](https://app.supabase.com)
@@ -266,16 +273,27 @@ POST /api/appointment-link   - Generate appointment link
 
 ## Environment Variables
 
-```env
-# Frontend (VITE_ prefix required)
-VITE_SUPABASE_URL=          # Supabase project URL
-VITE_SUPABASE_ANON_KEY=     # Supabase anonymous key
+Create a `.env` file in the root directory with the following variables:
 
-# Backend
-DATABASE_URL=                # PostgreSQL connection string
-GEMINI_API_KEY=             # Google Gemini API key
-SESSION_SECRET=              # Express session secret
+### Frontend Variables (Required for Vite to expose them)
+```env
+VITE_SUPABASE_URL=https://your-project.supabase.co          # Supabase project URL
+VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...  # Supabase anonymous key
 ```
+
+### Backend Variables
+```env
+DATABASE_URL=postgresql://postgres:password@db.project.supabase.co:5432/postgres  # PostgreSQL connection string
+GEMINI_API_KEY=your_google_gemini_api_key                    # Google Gemini API key
+SESSION_SECRET=your_random_secure_session_secret             # Express session secret (any random string)
+```
+
+### Important Configuration Notes
+1. **Vite Frontend Variables**: All frontend variables MUST start with `VITE_` prefix
+2. **File Location**: `.env` must be in the **root directory** (same level as `package.json`)
+3. **Server Restart Required**: After modifying `.env`, restart the dev server (`npm run dev`)
+4. **No process.env in Frontend**: Vite does not support `process.env` in React code - frontend code uses `import.meta.env`
+5. **Production Builds**: Build command (`npm run build`) will embed `VITE_*` variables at build time
 
 ## Deployment
 
@@ -330,6 +348,26 @@ npm install
 # Check TypeScript errors
 npm run check
 ```
+
+### Environment Variable Issues
+
+**Problem**: `[plugin:runtime-error-plugin] process is not defined` or `Missing Supabase environment variables`
+- ✅ Ensure `.env` file is in the **root directory** (not in `client/` or `server/`)
+- ✅ Variables must have `VITE_` prefix for frontend access: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`
+- ✅ **Restart the dev server** after editing `.env` - changes don't take effect until restart
+- ✅ Frontend code uses `import.meta.env.VITE_*`, NOT `process.env.VITE_*`
+- ✅ Check browser console for environment variable loading errors
+
+**Problem**: Environment variables are undefined in development
+```bash
+# Solution: Restart the dev server
+npm run dev  # Stop with Ctrl+C, then run again
+```
+
+**Problem**: Build succeeds but production shows "Missing environment variables"
+- ✅ Ensure `VITE_*` variables are set in your deployment platform
+- ✅ For Render: Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in Environment Variables
+- ✅ Rebuild after setting environment variables
 
 ## Testing
 
