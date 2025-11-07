@@ -8,3 +8,5 @@ vite.config.ts.*
 .env.*
 server/.env
 server/.env.*
+client/.env
+server/.env
