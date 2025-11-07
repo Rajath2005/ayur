@@ -36,5 +36,12 @@ export default defineConfig({
       strict: true,
       deny: ["**/.*"],
     },
+    // Explicit dev server port and HMR host/port to ensure the client constructs
+    // valid WebSocket URLs (prevents ws://localhost:undefined errors).
+    port: 5173,
+    hmr: {
+      host: 'localhost',
+      port: 5173,
+    },
   },
 });
