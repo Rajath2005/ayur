@@ -20,6 +20,8 @@ export interface SignInData {
 }
 
 export const signUp = async ({ email, password, name }: SignUpData): Promise<AuthUser> => {
+  if (!supabase) throw new Error('Supabase is not initialized. Please check your environment variables.');
+
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -41,6 +43,8 @@ export const signUp = async ({ email, password, name }: SignUpData): Promise<Aut
 };
 
 export const signIn = async ({ email, password }: SignInData): Promise<AuthUser> => {
+  if (!supabase) throw new Error('Supabase is not initialized. Please check your environment variables.');
+
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
@@ -57,6 +61,8 @@ export const signIn = async ({ email, password }: SignInData): Promise<AuthUser>
 };
 
 export const signInWithGoogle = async (): Promise<void> => {
+  if (!supabase) throw new Error('Supabase is not initialized. Please check your environment variables.');
+
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
@@ -68,11 +74,18 @@ export const signInWithGoogle = async (): Promise<void> => {
 };
 
 export const logout = async (): Promise<void> => {
+  if (!supabase) throw new Error('Supabase is not initialized. Please check your environment variables.');
+
   const { error } = await supabase.auth.signOut();
   if (error) throw error;
 };
 
 export const restoreSession = async (): Promise<AuthUser | null> => {
+  if (!supabase) {
+    console.warn('Supabase is not initialized. Please check your environment variables.');
+    return null;
+  }
+
   const { data: { session }, error } = await supabase.auth.getSession();
 
   if (error) {
@@ -90,6 +103,8 @@ export const restoreSession = async (): Promise<AuthUser | null> => {
 };
 
 export const resetPassword = async (email: string): Promise<void> => {
+  if (!supabase) throw new Error('Supabase is not initialized. Please check your environment variables.');
+
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: `${window.location.origin}/reset-password`,
   });
@@ -98,6 +113,11 @@ export const resetPassword = async (email: string): Promise<void> => {
 };
 
 export const getCurrentUser = async (): Promise<AuthUser | null> => {
+  if (!supabase) {
+    console.warn('Supabase is not initialized. Please check your environment variables.');
+    return null;
+  }
+
   const { data: { user }, error } = await supabase.auth.getUser();
 
   if (error || !user) return null;
@@ -110,6 +130,11 @@ export const getCurrentUser = async (): Promise<AuthUser | null> => {
 };
 
 export const onAuthStateChange = (callback: (user: AuthUser | null) => void) => {
+  if (!supabase) {
+    console.warn('Supabase is not initialized. Please check your environment variables.');
+    return { unsubscribe: () => {} };
+  }
+
   const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
     if (session?.user) {
       callback({
