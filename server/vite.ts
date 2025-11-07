@@ -20,9 +20,19 @@ export function log(message: string, source = "express") {
 }
 
 export async function setupVite(app: Express, server: Server) {
+  // Ensure Vite HMR client knows how to connect back. When running the app
+  // on a single port (default 5000) the HMR client's ws URL can become
+  // invalid (ws://localhost:undefined). Provide explicit host/clientPort
+  // so the client builds a valid ws://localhost:PORT URL.
+  const devPort = parseInt(process.env.PORT || "5000", 10);
   const serverOptions = {
     middlewareMode: true,
-    hmr: { server },
+    hmr: {
+      server,
+      host: 'localhost',
+      // clientPort tells the HMR client which port to connect to
+      clientPort: devPort,
+    },
     allowedHosts: true as const,
   };
 

@@ -1,633 +1,126 @@
-# Single Sign-On (SSO) Integration Guide
-## Connecting MediQ and Ayudost Chatbot Authentication
+# Firebase SSO Guide — MediQ & AyurDost
 
-This guide explains how to implement Single Sign-On between MediQ and Ayudost Chatbot, allowing users to authenticate once and access both applications seamlessly.
+This guide explains how MediQ and AyurDost (AyurChat) share the same Firebase project to deliver seamless Single Sign-On (SSO). Users who authenticate on either application stay logged in across both products automatically.
+
+---
 
 ## Table of Contents
-1. [Option A: Shared Supabase Project (Recommended)](#option-a-shared-supabase-project)
-2. [Option B: JWT Token Exchange (Separate Projects)](#option-b-jwt-token-exchange)
-3. [Security Best Practices](#security-best-practices)
-4. [Implementation Steps](#implementation-steps)
-5. [Troubleshooting](#troubleshooting)
+
+1. [Overview](#overview)
+2. [Shared Firebase Project Setup](#shared-firebase-project-setup)
+3. [Frontend Configuration](#frontend-configuration)
+4. [Backend Configuration](#backend-configuration)
+5. [Cross-Domain Session Flow](#cross-domain-session-flow)
+6. [Local Development Tips](#local-development-tips)
+7. [Troubleshooting](#troubleshooting)
+8. [Reference Checklist](#reference-checklist)
 
 ---
 
-## Option A: Shared Supabase Project (Recommended)
+## Overview
 
-### Overview
-The simplest and most secure approach is to use the same Supabase project for both MediQ and Ayudost Chatbot. This allows automatic session sharing across both applications.
+Both applications rely on **the same Firebase project**. Each app registers as a Firebase Web client and uses identical authentication providers (Email/Password + Google). Because Firebase Auth stores its session in first-party cookies scoped to the auth domain, users stay logged in when moving between MediQ and AyurDost.
 
-### Architecture
-```
-┌─────────┐         ┌──────────────────┐         ┌──────────────┐
-│  MediQ  │◄───────►│ Shared Supabase  │◄───────►│   Ayudost    │
-│   App   │         │     Project      │         │   Chatbot    │
-└─────────┘         └──────────────────┘         └──────────────┘
-                     - Auth Tables
-                     - User Sessions
-                     - Single Database
-```
-
-### Step-by-Step Implementation
-
-#### 1. Use Same Supabase Project
-Both applications should point to the same Supabase instance:
-
-**MediQ `.env`:**
-```env
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=your_anon_key_here
-```
-
-**Ayudost Chatbot `.env`:**
-```env
-VITE_SUPABASE_URL=https://your-project.supabase.co  # Same as MediQ
-VITE_SUPABASE_ANON_KEY=your_anon_key_here            # Same as MediQ
-```
-
-#### 2. Configure Supabase Auth Settings
-
-In your Supabase Dashboard (https://app.supabase.com):
-
-1. Go to **Authentication > URL Configuration**
-2. Add both domains to **Site URL**:
-   - `https://mediq.yourdomain.com`
-   - `https://ayudost-chatbot.onrender.com`
-3. Add both domains to **Redirect URLs**:
-   - `https://mediq.yourdomain.com/dashboard`
-   - `https://ayudost-chatbot.onrender.com/dashboard`
-
-#### 3. Session Sharing Across Domains
-
-**Important:** Browser security prevents automatic cookie sharing across different domains. You have two sub-options:
-
-##### A. Same Parent Domain (Recommended)
-Host both apps under the same parent domain:
-- MediQ: `mediq.yourdomain.com`
-- Ayudost: `ayudost.yourdomain.com`
-
-Configure Supabase client with `cookieOptions`:
-
-```typescript
-// client/src/services/supabaseClient.ts
-import { createClient } from '@supabase/supabase-js';
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true,
-    flowType: 'pkce',
-    storage: window.localStorage, // Use localStorage for cross-subdomain sharing
-    storageKey: 'unified-auth-session', // Same key for both apps
-  }
-});
-```
-
-##### B. Different Domains with Token Passing
-If apps are on completely different domains, implement token passing:
-
-**From MediQ to Ayudost:**
-```typescript
-// In MediQ app
-const redirectToAyudost = async () => {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (session) {
-    // Pass access token as query parameter
-    window.location.href = `https://ayudost-chatbot.onrender.com/auth/callback?access_token=${session.access_token}&refresh_token=${session.refresh_token}`;
-  }
-};
-```
-
-**In Ayudost Chatbot:**
-```typescript
-// Create new route: client/src/pages/auth-callback.tsx
-import { useEffect } from 'react';
-import { useLocation } from 'wouter';
-import { supabase } from '@/services/supabaseClient';
-import { Loader2 } from 'lucide-react';
-
-export default function AuthCallback() {
-  const [, setLocation] = useLocation();
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const accessToken = params.get('access_token');
-    const refreshToken = params.get('refresh_token');
-
-    if (accessToken && refreshToken) {
-      supabase.auth.setSession({
-        access_token: accessToken,
-        refresh_token: refreshToken
-      }).then(() => {
-        setLocation('/dashboard');
-      });
-    } else {
-      setLocation('/login');
-    }
-  }, []);
-
-  return (
-    <div className="min-h-screen flex items-center justify-center">
-      <Loader2 className="h-12 w-12 animate-spin text-primary" />
-    </div>
-  );
-}
-```
-
-#### 4. Verify Session on Both Apps
-
-Both apps will automatically verify sessions using Supabase's built-in auth:
-
-```typescript
-// This code is already implemented in client/src/contexts/AuthContext.tsx
-const { data: { session } } = await supabase.auth.getSession();
-```
-
-### Advantages
-- Simple setup
-- Automatic session management
-- Single source of truth for user data
-- No custom token validation needed
-- Built-in security with Supabase
-
-### Disadvantages
-- Both apps depend on same Supabase instance
-- Shared database (can be mitigated with Row Level Security)
+Key points:
+- One Firebase project powers both apps
+- Each app uses Firebase Auth for sign-in and reads the same session cookie
+- Express backends validate requests using Firebase Admin and the same service account
 
 ---
 
-## Option B: JWT Token Exchange (Separate Projects)
+## Shared Firebase Project Setup
 
-### Overview
-If MediQ and Ayudost must use separate Supabase/Firebase projects, implement JWT token exchange.
-
-### Architecture
-```
-┌─────────┐         ┌──────────────┐         ┌──────────────┐         ┌──────────────┐
-│  MediQ  │◄───────►│   Supabase   │         │   Supabase   │◄───────►│   Ayudost    │
-│   App   │         │   Project A  │         │   Project B  │         │   Chatbot    │
-└─────────┘         └──────────────┘         └──────────────┘         └──────────────┘
-                           │                         ▲
-                           │    JWT Token            │
-                           └─────────────────────────┘
-```
-
-### Step-by-Step Implementation
-
-#### 1. Create Token Exchange Endpoint
-
-Create a secure backend endpoint to validate and exchange tokens:
-
-**MediQ Backend (Node.js/Express):**
-```typescript
-// server/routes/token-exchange.ts
-import express from 'express';
-import { createClient } from '@supabase/supabase-js';
-
-const router = express.Router();
-
-const mediqSupabase = createClient(
-  process.env.MEDIQ_SUPABASE_URL!,
-  process.env.MEDIQ_SUPABASE_SERVICE_KEY! // Service role key
-);
-
-router.post('/api/generate-sso-token', async (req, res) => {
-  const { access_token } = req.body;
-
-  try {
-    // Verify MediQ token
-    const { data: { user }, error } = await mediqSupabase.auth.getUser(access_token);
-
-    if (error || !user) {
-      return res.status(401).json({ error: 'Invalid token' });
-    }
-
-    // Generate SSO token (JWT with user info)
-    const ssoToken = jwt.sign(
-      {
-        user_id: user.id,
-        email: user.email,
-        name: user.user_metadata?.name,
-        exp: Math.floor(Date.now() / 1000) + (60 * 15), // 15 minutes
-      },
-      process.env.SSO_SECRET_KEY!, // Shared secret between apps
-      { algorithm: 'HS256' }
-    );
-
-    res.json({ sso_token: ssoToken });
-  } catch (error) {
-    res.status(500).json({ error: 'Token generation failed' });
-  }
-});
-
-export default router;
-```
-
-#### 2. Create SSO Login Handler in Ayudost
-
-**Ayudost Backend:**
-```typescript
-// server/routes/sso-login.ts
-import express from 'express';
-import jwt from 'jsonwebtoken';
-import { createClient } from '@supabase/supabase-js';
-
-const router = express.Router();
-
-const ayudostSupabase = createClient(
-  process.env.AYUDOST_SUPABASE_URL!,
-  process.env.AYUDOST_SUPABASE_SERVICE_KEY!
-);
-
-router.post('/api/sso-login', async (req, res) => {
-  const { sso_token } = req.body;
-
-  try {
-    // Verify SSO token
-    const decoded = jwt.verify(sso_token, process.env.SSO_SECRET_KEY!) as {
-      user_id: string;
-      email: string;
-      name: string;
-    };
-
-    // Check if user exists in Ayudost Supabase
-    const { data: existingUser } = await ayudostSupabase.auth.admin.getUserById(decoded.user_id);
-
-    if (!existingUser) {
-      // Create user in Ayudost Supabase
-      const { data: newUser, error } = await ayudostSupabase.auth.admin.createUser({
-        email: decoded.email,
-        email_confirm: true,
-        user_metadata: { name: decoded.name }
-      });
-
-      if (error) throw error;
-    }
-
-    // Generate Ayudost session
-    const { data, error } = await ayudostSupabase.auth.admin.generateLink({
-      type: 'magiclink',
-      email: decoded.email,
-    });
-
-    if (error) throw error;
-
-    res.json({ access_token: data.properties.access_token });
-  } catch (error) {
-    res.status(401).json({ error: 'SSO login failed' });
-  }
-});
-
-export default router;
-```
-
-#### 3. Frontend Integration
-
-**MediQ: Initiate SSO**
-```typescript
-// In MediQ app
-const loginToAyudost = async () => {
-  const { data: { session } } = await mediqSupabase.auth.getSession();
-
-  // Get SSO token from MediQ backend
-  const response = await fetch('https://mediq-api.yourdomain.com/api/generate-sso-token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ access_token: session.access_token })
-  });
-
-  const { sso_token } = await response.json();
-
-  // Redirect to Ayudost with SSO token
-  window.location.href = `https://ayudost-chatbot.onrender.com/sso-callback?token=${ssoToken}`;
-};
-```
-
-**Ayudost: Handle SSO Callback**
-```typescript
-// client/src/pages/sso-callback.tsx
-import { useEffect } from 'react';
-import { useLocation } from 'wouter';
-import { supabase } from '@/services/supabaseClient';
-
-export default function SSOCallback() {
-  const [, setLocation] = useLocation();
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const ssoToken = params.get('token');
-
-    if (ssoToken) {
-      // Exchange SSO token for Ayudost session
-      fetch('/api/sso-login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sso_token: ssoToken })
-      })
-      .then(res => res.json())
-      .then(({ access_token }) => {
-        // Set session in Ayudost Supabase
-        return supabase.auth.setSession({ access_token });
-      })
-      .then(() => {
-        setLocation('/dashboard');
-      })
-      .catch(() => {
-        setLocation('/login');
-      });
-    }
-  }, []);
-
-  return <div>Authenticating...</div>;
-}
-```
-
-### Advantages
-- Complete separation between projects
-- Each app can have independent database
-- Flexible authentication customization
-
-### Disadvantages
-- More complex implementation
-- Requires backend API for token exchange
-- Need to manage shared secret securely
-- Must sync user data between systems
+1. **Create (or select) a Firebase project** in the [Firebase console](https://console.firebase.google.com/).
+2. **Enable Authentication** and turn on the providers you need (Email/Password, Google, etc.).
+3. **Add two Web apps** under the same project:
+   - One for `mediq.example.com` (or local dev origin)
+   - One for `ayurdost.example.com` (or local dev origin)
+4. **Configure Authorized Domains** for both applications in Firebase Authentication settings. Include:
+   - `localhost` (for local development)
+   - Production domains for MediQ and AyurDost
 
 ---
 
-## Security Best Practices
+## Frontend Configuration
 
-### 1. Secure Token Storage
+Each app needs environment variables for the same Firebase project.
 
-**Use httpOnly Cookies (when possible):**
-```typescript
-// If both apps are on same parent domain
-const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    storage: {
-      getItem: (key) => {
-        // Custom cookie-based storage
-        return Cookies.get(key);
-      },
-      setItem: (key, value) => {
-        Cookies.set(key, value, {
-          domain: '.yourdomain.com', // Parent domain
-          secure: true,
-          sameSite: 'lax',
-          expires: 7 // 7 days
-        });
-      },
-      removeItem: (key) => {
-        Cookies.remove(key, { domain: '.yourdomain.com' });
-      }
-    }
-  }
-});
+```
+VITE_FIREBASE_API_KEY=...
+VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your-project-id
+VITE_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
+VITE_FIREBASE_MESSAGING_SENDER_ID=...
+VITE_FIREBASE_APP_ID=...
+VITE_FIREBASE_MEASUREMENT_ID=... # optional
 ```
 
-**Otherwise, use localStorage with encryption:**
-```typescript
-import CryptoJS from 'crypto-js';
+### Authentication Flow
 
-const ENCRYPTION_KEY = process.env.VITE_STORAGE_ENCRYPTION_KEY!;
+1. The user signs in (Email/Password or Google) via Firebase Auth from either app.
+2. Firebase persists the session in its auth cookie (`__session`), shared because both apps use the same auth domain.
+3. The React apps listen to `onAuthStateChanged`, update global state, and fetch the ID token via `getIdToken()` for API calls.
 
-const secureStorage = {
-  getItem: (key: string) => {
-    const encrypted = localStorage.getItem(key);
-    if (!encrypted) return null;
-    const decrypted = CryptoJS.AES.decrypt(encrypted, ENCRYPTION_KEY);
-    return decrypted.toString(CryptoJS.enc.Utf8);
-  },
-  setItem: (key: string, value: string) => {
-    const encrypted = CryptoJS.AES.encrypt(value, ENCRYPTION_KEY).toString();
-    localStorage.setItem(key, encrypted);
-  },
-  removeItem: (key: string) => {
-    localStorage.removeItem(key);
-  }
-};
-```
-
-### 2. Token Validation
-
-Always verify tokens server-side:
-
-```typescript
-// Backend token verification
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseAdmin = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_KEY!, // Service role key
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-);
-
-export async function verifyToken(accessToken: string) {
-  const { data: { user }, error } = await supabaseAdmin.auth.getUser(accessToken);
-
-  if (error || !user) {
-    throw new Error('Invalid token');
-  }
-
-  return user;
-}
-```
-
-### 3. CORS Configuration
-
-Configure CORS properly for cross-origin requests:
-
-```typescript
-// Express server
-import cors from 'cors';
-
-app.use(cors({
-  origin: [
-    'https://mediq.yourdomain.com',
-    'https://ayudost-chatbot.onrender.com'
-  ],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
-```
-
-### 4. Token Expiration
-
-Set appropriate token expiration times:
-
-```typescript
-// Supabase configuration
-const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true,
-  },
-  global: {
-    headers: {
-      'x-session-lifetime': '3600', // 1 hour
-    },
-  },
-});
-```
-
-### 5. Environment Variables
-
-Keep all sensitive keys in environment variables:
-
-```env
-# MediQ
-VITE_SUPABASE_URL=https://mediq-project.supabase.co
-VITE_SUPABASE_ANON_KEY=mediq_anon_key
-SUPABASE_SERVICE_KEY=mediq_service_key
-SSO_SECRET_KEY=shared_secret_key_between_apps
-
-# Ayudost
-VITE_SUPABASE_URL=https://ayudost-project.supabase.co
-VITE_SUPABASE_ANON_KEY=ayudost_anon_key
-SUPABASE_SERVICE_KEY=ayudost_service_key
-SSO_SECRET_KEY=same_shared_secret_key
-```
+No additional token exchange or iframe messaging is required.
 
 ---
 
-## Implementation Steps
+## Backend Configuration
 
-### Quick Start (Option A: Shared Supabase)
+Both Express servers validate Firebase ID tokens with the same service account.
 
-1. **Update Environment Variables:**
-   - Use same Supabase URL and keys in both apps
-   - Ensure both apps use same `storageKey` in Supabase config
+```
+FIREBASE_SERVICE_ACCOUNT={"type":"service_account",...}
+```
 
-2. **Configure Supabase Dashboard:**
-   - Add all redirect URLs for both apps
-   - Enable email/password authentication
-   - (Optional) Configure Google OAuth provider
+Steps:
+1. Download a service account JSON with **Firebase Admin** permissions.
+2. Store the entire JSON as the `FIREBASE_SERVICE_ACCOUNT` environment variable (stringified JSON).
+3. The middleware at `server/middleware/verifyFirebaseToken.ts` parses and initializes Firebase Admin.
+4. Protected routes use this middleware to populate `req.user` with the decoded token.
 
-3. **Deploy Both Apps:**
-   - MediQ: `npm run build && deploy`
-   - Ayudost: `npm run build && deploy`
+Because both backends share a Firebase project, the decoded UID and claims are consistent across apps.
 
-4. **Test SSO Flow:**
-   - Log in to MediQ
-   - Navigate to Ayudost
-   - User should be automatically logged in
+---
 
-### Testing Checklist
+## Cross-Domain Session Flow
 
-- [ ] User can register in MediQ
-- [ ] User session persists after refresh in MediQ
-- [ ] User can access Ayudost without re-login
-- [ ] User session persists after refresh in Ayudost
-- [ ] Logout from MediQ logs out of Ayudost
-- [ ] Logout from Ayudost logs out of MediQ
-- [ ] Google OAuth works on both apps
-- [ ] Password reset works on both apps
+1. User signs in on MediQ (`mediq.example.com`).
+2. MediQ stores the Firebase session cookie in the browser (scoped to the shared auth domain).
+3. When the user visits AyurDost (`ayurdost.example.com`), Firebase Auth detects the existing session and auto-logins the user.
+4. AyurDost fetches a fresh ID token and sends it to its Express API with `Authorization: Bearer <token>`.
+5. AyurDost backend trusts the token because it validates against the same Firebase project.
+
+This also works in reverse (AyurDost → MediQ).
+
+---
+
+## Local Development Tips
+
+- Use unique origins (e.g., `http://localhost:5173` for AyurDost, `http://localhost:5174` for MediQ).
+- Both origins must be whitelisted under **Authentication > Settings > Authorized Domains** in Firebase.
+- If you see `auth-domain not authorized` errors, double-check the hostnames listed in Firebase.
 
 ---
 
 ## Troubleshooting
 
-### Issue: Session Not Shared Between Apps
-
-**Symptoms:**
-- User logged in to MediQ but not recognized in Ayudost
-
-**Solutions:**
-1. Verify both apps use same Supabase project
-2. Check that `storageKey` is identical in both apps
-3. Ensure redirect URLs are configured in Supabase
-4. Clear browser cache and localStorage
-5. Check browser console for CORS errors
-
-### Issue: Token Expired Error
-
-**Symptoms:**
-- User gets logged out frequently
-- "JWT expired" error
-
-**Solutions:**
-1. Enable `autoRefreshToken` in Supabase config
-2. Implement token refresh logic:
-```typescript
-supabase.auth.onAuthStateChange((event, session) => {
-  if (event === 'TOKEN_REFRESHED') {
-    console.log('Token refreshed successfully');
-  }
-  if (event === 'SIGNED_OUT') {
-    console.log('User signed out');
-  }
-});
-```
-
-### Issue: CORS Errors
-
-**Symptoms:**
-- Network requests blocked by browser
-- "Access-Control-Allow-Origin" error
-
-**Solutions:**
-1. Add domains to Supabase allowed origins
-2. Configure backend CORS settings
-3. Use proxy for development:
-```typescript
-// vite.config.ts
-export default defineConfig({
-  server: {
-    proxy: {
-      '/api': {
-        target: 'https://your-supabase-project.supabase.co',
-        changeOrigin: true,
-      }
-    }
-  }
-});
-```
-
-### Issue: User Data Not Syncing
-
-**Symptoms:**
-- User updates in MediQ not reflected in Ayudost
-
-**Solutions:**
-1. Use Supabase Realtime subscriptions:
-```typescript
-const channel = supabase
-  .channel('user-updates')
-  .on('postgres_changes',
-    {
-      event: 'UPDATE',
-      schema: 'auth',
-      table: 'users'
-    },
-    (payload) => {
-      // Update local user state
-      refreshUser();
-    }
-  )
-  .subscribe();
-```
+| Issue | Resolution |
+| ----- | ---------- |
+| Users asked to re-login when switching apps | Ensure both apps use the exact same Firebase project ID and Auth domain. Clear cookies when switching between projects. |
+| Backend returns 401 after login | Confirm the frontend includes `Authorization: Bearer <idToken>` and the backend has a valid `FIREBASE_SERVICE_ACCOUNT`. |
+| Google sign-in popup blocked | Verify the Firebase Web app has the correct OAuth client IDs configured and the domain is authorized in the Google Cloud console. |
+| Token expired errors | Call `getIdToken(true)` on the frontend to force refresh, or rely on Firebase's automatic refresh timers. |
 
 ---
 
-## Additional Resources
+## Reference Checklist
 
-- [Supabase Auth Documentation](https://supabase.com/docs/guides/auth)
-- [JWT Best Practices](https://auth0.com/blog/a-look-at-the-latest-draft-for-jwt-bcp/)
-- [CORS Guide](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS)
-- [OAuth 2.0 Specification](https://oauth.net/2/)
+- [ ] MediQ and AyurDost point to the same Firebase project ID
+- [ ] Both apps include identical `VITE_FIREBASE_*` values
+- [ ] `FIREBASE_SERVICE_ACCOUNT` is configured on both backends
+- [ ] Authorized domains list includes all dev and production hosts
+- [ ] Google OAuth client IDs correspond to the same Firebase project
+- [ ] Frontends attach `Authorization: Bearer <token>` to API requests
 
-## Support
-
-For issues or questions:
-- Check Supabase logs in Dashboard
-- Review browser Network tab for API errors
-- Contact your development team
-- Open issue on project repository
+With this setup, users can move between MediQ and AyurDost without re-authenticating, delivering a unified SSO experience.

@@ -40,7 +40,7 @@ export default function Register() {
   const onSubmit = async (data: RegisterInput) => {
     setLoading(true);
     try {
-      await signUp(data);
+      await signUp(data.email, data.password, data.name);
       await refreshUser();
       toast({
         title: "Account created!",

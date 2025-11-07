@@ -1,105 +1,88 @@
 # AyurChat - Ayurvedic AI Wellness Companion
 
-A fullstack AI chatbot application built with React, Node.js, Express, Supabase, and Gemini AI, providing personalized Ayurvedic wellness guidance.
+A fullstack AI chatbot application built with React, Node.js, Express, Firebase Auth, and Gemini AI, providing personalized Ayurvedic wellness guidance.
 
 ## 🌿 Features
 
 ### Frontend
-- **Landing Page**: Beautiful hero section with Ayurvedic theming and feature highlights
-- **Authentication**: Secure login and registration with form validation
-- **Dashboard**: Wellness overview with statistics and quick actions
-- **Chat Interface**: 
-  - Real-time AI-powered conversations with streaming simulation
-  - File upload support with visual previews
-  - Emoji picker integration
-  - Voice input simulation (mic button)
-  - Typing indicators
-  - Conversation history sidebar
-- **Dark/Light Mode**: Persistent theme toggle with herbal green color scheme
-- **Responsive Design**: Optimized for desktop and mobile devices
+- Landing page with Ayurvedic theming and feature highlights
+- Secure login and registration with Firebase Auth
+- Dashboard with wellness insights and quick actions
+- Conversational chat UI with attachments, emoji picker, and typing indicators
+- Persistent dark/light mode and responsive design
 
 ### Backend
-- **Authentication Routes** (`/api/auth`):
-  - `POST /api/auth/register` - User registration
-  - `POST /api/auth/login` - User login
-  - `POST /api/auth/logout` - User logout
-  
-- **Chat Routes** (`/api/chat`):
-  - `POST /api/chat` - Send message and get AI response
-  
-- **Conversation Routes** (`/api/conversations`):
-  - `GET /api/conversations` - List all user conversations
-  - `GET /api/conversations/:id` - Get specific conversation
-  - `POST /api/conversations` - Create new conversation
-  - `DELETE /api/conversations/:id` - Delete conversation
-  
-- **Message Routes** (`/api/messages`):
-  - `GET /api/messages/:conversationId` - Get all messages in conversation
-  
-- **Ayurvedic Features**:
-  - `POST /api/symptom` - Symptom analysis with AI
-  - `POST /api/remedies` - Get herbal remedy suggestions
-  - `POST /api/appointment-link` - Generate appointment booking link
-  
-- **File Upload** (`/api/upload`):
-  - `POST /api/upload` - Upload files for chat attachments
+- **Auth**: All protected routes validate Firebase ID tokens via middleware
+- **Chat**: `/api/chat` streams AI responses from Gemini
+- **Conversations**: CRUD routes for managing chat history
+- **Messages**: Fetch conversation messages
+- **Ayurvedic utilities**: Symptom analysis, herbal remedies, appointment link generation
+- **Uploads**: Placeholder upload endpoint for attachments
 
 ## 🚀 Getting Started
 
 ### Prerequisites
-1. **Supabase Database**: 
-   - Go to [Supabase Dashboard](https://supabase.com/dashboard/projects)
-   - Create a new project
-   - Click "Connect" → "Connection string" → "Transaction pooler"
-   - Copy the URI and replace `[YOUR-PASSWORD]` with your database password
-   - Add as `DATABASE_URL` secret in Replit
+1. **Firebase Project**
+   - Enable Authentication (Email/Password + Google provider)
+   - Add Web apps for local development and production domains
+   - Download a service account JSON for Firebase Admin access
 
-2. **Gemini API Key**:
+2. **Gemini API Key**
    - Visit [Google AI Studio](https://aistudio.google.com/app/apikey)
-   - Sign in and create an API key
-   - Add as `GEMINI_API_KEY` secret in Replit
+   - Generate an API key and store it securely
+
+3. **Optional Database**
+   - Configure a PostgreSQL database for persistent storage (`DATABASE_URL`)
+   - If omitted, the server falls back to the in-memory store
 
 ### Environment Variables
-Create these secrets in Replit:
+Configure the following secrets in Replit (or `.env` locally):
+
 ```
-DATABASE_URL=postgresql://[user]:[password]@[host]/[database]
+# Firebase (frontend)
+VITE_FIREBASE_API_KEY=...
+VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your-project-id
+VITE_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
+VITE_FIREBASE_MESSAGING_SENDER_ID=...
+VITE_FIREBASE_APP_ID=...
+VITE_FIREBASE_MEASUREMENT_ID=... # optional
+
+# Firebase (backend)
+FIREBASE_SERVICE_ACCOUNT={"type":"service_account",...} # JSON string
+
+# Gemini
 GEMINI_API_KEY=your_gemini_api_key_here
-SESSION_SECRET=your_session_secret_here
+
+# Database (optional)
+DATABASE_URL=postgresql://user:password@host:5432/database
 ```
 
-### Optional Integrations (Future Enhancement)
-- **Pinecone**: For RAG-based Ayurvedic knowledge base
-  - `PINECONE_API_KEY`
-  - `PINECONE_ENVIRONMENT`
-  
-- **Cloudinary**: For image/file storage
-  - `CLOUDINARY_CLOUD_NAME`
-  - `CLOUDINARY_API_KEY`
-  - `CLOUDINARY_API_SECRET`
+### Optional Integrations
+- **Pinecone** – `PINECONE_API_KEY`, `PINECONE_ENVIRONMENT`
+- **Cloudinary** – `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`
 
 ## 📦 Installation & Running
 
-### Using Replit (Recommended)
+### Using Replit
 1. Open this Repl
-2. Click "Run" - the application will automatically:
-   - Install all dependencies
-   - Set up the database
-   - Start both frontend and backend servers
-3. The app will be available at the provided URL
+2. Add the required secrets (see above)
+3. Click "Run" to install dependencies and start the dev server
+4. The combined app is served from the generated Replit URL
 
 ### Local Development
 ```bash
 # Install dependencies
 npm install
 
-# Run database migrations
+# Run database migrations (if using Postgres)
 npm run db:push
 
 # Start development server (frontend + backend)
 npm run dev
 ```
 
-The application runs on a single port (5000) with Vite handling both frontend and backend.
+Vite proxies API calls to the Express server, allowing both frontend and backend to run together.
 
 ## 🏗️ Project Structure
 
@@ -107,153 +90,77 @@ The application runs on a single port (5000) with Vite handling both frontend an
 ├── client/                 # Frontend React application
 │   ├── src/
 │   │   ├── components/    # Reusable UI components
-│   │   │   ├── ui/       # shadcn components
-│   │   │   ├── app-sidebar.tsx
-│   │   │   ├── theme-provider.tsx
-│   │   │   └── theme-toggle.tsx
-│   │   ├── pages/        # Route pages
-│   │   │   ├── landing.tsx
-│   │   │   ├── login.tsx
-│   │   │   ├── register.tsx
-│   │   │   ├── dashboard.tsx
-│   │   │   └── chat.tsx
-│   │   ├── lib/          # Utilities
-│   │   └── App.tsx       # Main app component
+│   │   ├── contexts/      # Auth context
+│   │   ├── pages/         # Route pages
+│   │   ├── services/      # Firebase auth helpers & API utils
+│   │   └── lib/           # Query client and utilities
 │   └── index.html
-│
 ├── server/                # Backend Express application
-│   ├── routes.ts         # API route handlers
-│   ├── storage.ts        # Data persistence layer
-│   ├── gemini.ts         # Gemini AI integration
-│   └── index.ts          # Server entry point
-│
-├── shared/               # Shared types and schemas
-│   └── schema.ts         # Database schema & Zod validation
-│
-└── db/                   # Database migrations
-    └── migrations/
+│   ├── routes.ts          # API route handlers
+│   ├── middleware/        # Firebase token verification
+│   ├── storage.ts         # Persistence abstraction
+│   ├── gemini.ts          # Gemini AI integration
+│   └── index.ts           # Server entry point
+├── shared/                # Shared types and schemas
+│   └── schema.ts
+└── db/                    # Optional database migrations
 ```
 
-## 🎨 Design System
+## 🔐 Authentication Overview
 
-### Color Palette
-- **Primary (Herbal Green)**: `hsl(142 45% 35%)` - Trust and natural wellness
-- **Light Mode**: Soft off-white backgrounds with subtle green tints
-- **Dark Mode**: Deep charcoal with green undertones
-- **Semantic Colors**: Success (green), Warning (amber), Error (red)
-
-### Typography
-- **Font Family**: Inter for UI, JetBrains Mono for code
-- **Scales**: Responsive text sizes with proper hierarchy
-
-### Components
-- Built with shadcn/ui and Radix UI
-- Consistent spacing using Tailwind (4, 6, 8, 12, 16, 24)
-- Hover states with elevation system
-- Smooth transitions (200-300ms)
-
-## 🔧 Key Technologies
-
-### Frontend
-- **React 18** with TypeScript
-- **Wouter** for routing
-- **TanStack Query** for data fetching
-- **React Hook Form** + Zod for forms
-- **shadcn/ui** + Tailwind CSS for UI
-- **emoji-picker-react** for emoji support
-- **Lucide React** for icons
-
-### Backend
-- **Node.js** + **Express**
-- **Drizzle ORM** with Supabase (PostgreSQL)
-- **Gemini AI** (via @google/genai)
-- **Passport.js** for authentication
-- **Express Session** for session management
+- The frontend initializes Firebase using `client/src/services/firebaseClient.ts`
+- `AuthContext` listens to `onAuthStateChanged` to manage user state
+- API requests include `Authorization: Bearer <idToken>` headers via `client/src/lib/queryClient.ts`
+- The backend validates tokens through `server/middleware/verifyFirebaseToken.ts`
+- `/api/auth/me` returns the decoded Firebase user, enabling profile display in the dashboard
 
 ## 🤖 AI Features
 
-### Gemini Integration
-The application uses Google's Gemini AI for:
-- Natural language understanding of health queries
-- Ayurvedic remedy recommendations
-- Symptom analysis from Ayurvedic perspective
-- Conversational wellness guidance
-
-### Medical Guardrails
-- Intent classification to detect medical emergencies
-- Safety filters for appropriate responses
-- Disclaimer messaging for professional consultation
-- Context-aware Ayurvedic knowledge base
+- Uses Google's Gemini models for Ayurvedic guidance
+- Supports symptom analysis, remedy suggestions, and appointment context generation
+- Includes safety messaging to remind users to consult practitioners
 
 ## 📝 API Routes Reference
 
 ### Authentication
-```typescript
-POST /api/auth/register
-Body: { username, email, password }
-
-POST /api/auth/login
-Body: { username, password }
-
-POST /api/auth/logout
+```http
+GET /api/auth/me        # Returns current Firebase-authenticated user
 ```
 
 ### Conversations
-```typescript
-GET /api/conversations
-Response: Conversation[]
-
-POST /api/conversations
-Body: { title }
-
+```http
+GET    /api/conversations
+GET    /api/conversations/:id
+POST   /api/conversations
 DELETE /api/conversations/:id
 ```
 
-### Messages & Chat
-```typescript
-GET /api/messages/:conversationId
-Response: Message[]
-
-POST /api/chat
-Body: { conversationId, content, attachments? }
+### Messages
+```http
+GET  /api/messages/:conversationId
+POST /api/chat                 # Sends a message and receives Gemini response
 ```
 
-### Ayurvedic Features
-```typescript
+### Ayurvedic Utilities
+```http
 POST /api/symptom
-Body: { symptoms: string, conversationId? }
-
 POST /api/remedies
-Body: { condition: string, dosha?: string }
-
 POST /api/appointment-link
-Body: { reason: string, userId }
 ```
 
-## 🔐 Security
+### Uploads
+```http
+POST /api/upload               # Placeholder upload handler
+```
 
-- Password hashing with bcrypt
-- Session-based authentication
-- CORS protection
-- Input validation with Zod schemas
-- SQL injection prevention via Drizzle ORM
-- Secure file upload handling
+## 🔧 Troubleshooting
 
-## 🚀 Deployment
+- **401 Unauthorized**: Confirm the frontend attaches the Firebase ID token and the backend has a valid `FIREBASE_SERVICE_ACCOUNT`.
+- **Firebase config warnings**: Double-check all `VITE_FIREBASE_*` values and authorized domains.
+- **Gemini errors**: Verify `GEMINI_API_KEY` is active and the account has model access.
 
-This application is optimized for Replit deployment:
-1. All environment variables configured via Replit Secrets
-2. Database migrations run automatically
-3. Single-port serving via Vite
-4. Production build optimizations included
+## 📚 Related Documentation
 
-## 📄 License
-
-MIT License - Feel free to use this for your wellness projects!
-
-## 🙏 Acknowledgments
-
-- Ancient Ayurvedic wisdom and practitioners
-- Google Gemini AI for powering intelligent responses
-- Supabase for robust database infrastructure
-- shadcn/ui for beautiful component primitives
+- [Firebase Auth Docs](https://firebase.google.com/docs/auth/web/start)
+- [Google AI Studio](https://aistudio.google.com/)
+- [AUTH_SSO_GUIDE.md](./AUTH_SSO_GUIDE.md) for MediQ ↔ AyurDost SSO setup

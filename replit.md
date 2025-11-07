@@ -1,24 +1,24 @@
 # AyurChat - Ayurvedic AI Wellness Companion
 
 ## Project Overview
-A modern fullstack AI chatbot application providing personalized Ayurvedic wellness guidance. Built with React, Node.js, Express, Supabase (PostgreSQL), and Google Gemini AI.
+A modern fullstack AI chatbot application providing personalized Ayurvedic wellness guidance. Built with React, Node.js, Express, Firebase Auth, and Google Gemini AI.
 
 ## Tech Stack
 - **Frontend**: React 18, TypeScript, Wouter, TanStack Query, shadcn/ui, Tailwind CSS
-- **Backend**: Node.js, Express, Drizzle ORM, Passport.js
-- **Database**: Supabase (PostgreSQL)
+- **Backend**: Node.js, Express, Drizzle ORM
+- **Authentication**: Firebase Auth (Email/Password + Google)
+- **Database**: PostgreSQL via Drizzle ORM (with in-memory fallback for dev)
 - **AI**: Google Gemini 2.5 Flash/Pro
-- **Styling**: Tailwind CSS with herbal green theme, dark/light mode
 
 ## Key Features
 1. **Landing Page** with Ayurvedic-themed hero section
-2. **Authentication** with secure login/register
-3. **Dashboard** with wellness statistics
-4. **AI Chat Interface** with:
-   - Real-time streaming simulation
-   - File upload support
+2. **Firebase Authentication** with secure login/register flows
+3. **Dashboard** with wellness statistics and quick actions
+4. **AI Chat Interface** featuring:
+   - Real-time response simulation
+   - File attachment metadata
    - Emoji picker
-   - Voice input simulation
+   - Voice input mock
    - Typing indicators
    - Conversation history sidebar
 5. **Quick Actions** for symptom checking, remedies, appointments
@@ -28,34 +28,31 @@ A modern fullstack AI chatbot application providing personalized Ayurvedic welln
 ```
 ├── client/src/           # React frontend
 │   ├── components/       # Reusable components + shadcn/ui
-│   ├── pages/           # Route pages (Landing, Login, Register, Dashboard, Chat)
-│   └── lib/             # Utilities and query client
+│   ├── pages/            # Route pages (Landing, Login, Register, Dashboard, Chat)
+│   ├── services/         # Firebase auth helpers & API utilities
+│   ├── contexts/         # Auth context powered by Firebase
+│   └── lib/              # Query client and shared helpers
 ├── server/              # Express backend
 │   ├── routes.ts        # API routes
-│   ├── storage.ts       # Data persistence interface
+│   ├── middleware/      # Firebase token verification
+│   ├── storage.ts       # Data persistence abstraction
 │   └── gemini.ts        # Gemini AI integration
 ├── shared/              # Shared types and schemas
 └── db/                  # Database migrations
 ```
 
 ## Environment Variables (Configured via Replit Secrets)
-- `DATABASE_URL` - Supabase PostgreSQL connection string
-- `GEMINI_API_KEY` - Google Gemini API key
-- `SESSION_SECRET` - Express session secret
+- `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_STORAGE_BUCKET`, `VITE_FIREBASE_MESSAGING_SENDER_ID`, `VITE_FIREBASE_APP_ID`, `VITE_FIREBASE_MEASUREMENT_ID`
+- `FIREBASE_SERVICE_ACCOUNT` — stringified service account JSON for firebase-admin
+- `GEMINI_API_KEY` — Google Gemini API key
+- `DATABASE_URL` — PostgreSQL connection string (optional for persistent storage)
 
-## Recent Changes (October 15, 2025)
-- Implemented complete schema with users, conversations, messages, appointments tables
-- Built all frontend pages with herbal green theme and dark mode
-- Created reusable sidebar component with conversation management
-- Implemented chat interface with file upload metadata, emoji picker, mic simulation
-- Set up theme provider with localStorage persistence
-- Added comprehensive routing with wouter
-- Configured design tokens in index.css and tailwind.config.ts
-- Implemented all backend API routes with Gemini AI integration
-- Set up Supabase PostgreSQL database with Drizzle ORM
-- Added express-session for authentication
-- Configured bcrypt password hashing and passport.js
-- Added all required data-testid attributes for testing
+## Recent Changes (October 2025)
+- Migrated authentication to Firebase Auth + Firebase Admin token verification
+- Updated documentation for Firebase SSO shared with MediQ
+- Added automatic ID token attachment to all frontend API requests
+- Hardened protected routes to rely solely on Firebase middleware
+- Refreshed README assets to document the Firebase migration
 
 ## User Preferences
 - Herbal green color scheme (hsl(142 45% 35%))
@@ -65,24 +62,21 @@ A modern fullstack AI chatbot application providing personalized Ayurvedic welln
 - Accessibility-first approach
 
 ## Development Notes
-- Using Supabase PostgreSQL for data persistence with automatic fallback to in-memory storage
-- Gemini AI integration completed with medical guardrails and Ayurvedic system prompts
-- File upload UI with attachment metadata (actual file storage can be enhanced with Cloudinary)
-- Voice recording UI simulation (can integrate real transcription services)
-- Pinecone vector DB placeholder for future RAG implementation
-- All interactive elements have data-testid attributes for e2e testing
+- Firebase Auth handles sessions; ID tokens are passed via `Authorization` headers
+- Backend uses Firebase Admin (`verifyFirebaseToken`) to secure routes
+- Data persistence uses PostgreSQL (Drizzle) or in-memory storage if `DATABASE_URL` is absent
+- Gemini AI integration includes Ayurvedic prompts and guardrails
+- File upload UI captures metadata; integrate external storage for production
+- Pinecone integration placeholders remain for future RAG functionality
 
 ## Implementation Status
-✅ Complete schema with Drizzle ORM
-✅ All frontend pages with herbal green theme
-✅ Authentication with bcrypt and passport.js
-✅ Session management with express-session
-✅ Gemini AI chat responses with medical guardrails
-✅ Conversation and message management
-✅ Dark/light theme toggle
-✅ Responsive design
-✅ Database migrations completed
-✅ All API routes functional
+✅ Firebase-based auth and SSO readiness with MediQ
+✅ Dashboard, chat, and landing experiences complete
+✅ Gemini AI responses with Ayurvedic-specific prompts
+✅ Conversation and message management flows
+✅ Dark/light theme toggle & responsive design
+✅ Database migrations available via Drizzle
+✅ API routes protected by Firebase middleware
 
 ## Notes on File Upload
 - UI allows file attachment with preview and removal

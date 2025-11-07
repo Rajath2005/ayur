@@ -38,7 +38,7 @@ export default function Login() {
   const onSubmit = async (data: LoginInput) => {
     setLoading(true);
     try {
-      await signIn(data);
+      await signIn(data.email, data.password);
       await refreshUser();
       toast({
         title: "Welcome back!",
@@ -57,18 +57,18 @@ export default function Login() {
   };
 
   const handleGoogleSignIn = async () => {
-    setGoogleLoading(true);
-    try {
-      await signInWithGoogle();
-    } catch (error: any) {
-      toast({
-        title: "Google sign-in failed",
-        description: error.message,
-        variant: "destructive",
-      });
-      setGoogleLoading(false);
-    }
-  };
+  setGoogleLoading(true);
+  try {
+    await signInWithGoogle();
+    await refreshUser();
+    setLocation("/dashboard");
+  } catch (error: any) {
+    // ...
+  } finally {
+    setGoogleLoading(false);
+  }
+};
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-background p-4">

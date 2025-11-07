@@ -1,5 +1,15 @@
-import { supabase } from './supabaseClient';
-import type { User, AuthError, AuthResponse } from '@supabase/supabase-js';
+// client/src/services/auth.ts
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signInWithPopup,
+  signOut,
+  onAuthStateChanged,
+  sendPasswordResetEmail,
+  getIdToken,
+  type User as FirebaseUser,
+} from "firebase/auth";
+import { auth, googleProvider } from "./firebaseClient";
 
 export interface AuthUser {
   id: string;
@@ -8,119 +18,68 @@ export interface AuthUser {
   avatar?: string;
 }
 
-export interface SignUpData {
-  email: string;
-  password: string;
-  name?: string;
-}
-
-export interface SignInData {
-  email: string;
-  password: string;
-}
-
-export const signUp = async ({ email, password, name }: SignUpData): Promise<AuthUser> => {
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      data: {
-        name: name || email.split('@')[0],
-      }
-    }
-  });
-
-  if (error) throw error;
-  if (!data.user) throw new Error('Sign up failed');
-
-  return {
-    id: data.user.id,
-    email: data.user.email!,
-    name: data.user.user_metadata?.name || name,
-  };
+export const signUp = async (email: string, password: string, name?: string): Promise<AuthUser> => {
+  const { user } = await createUserWithEmailAndPassword(auth, email, password);
+  // Optionally set displayName via updateProfile if needed (not included here)
+  return mapFirebaseUser(user);
 };
 
-export const signIn = async ({ email, password }: SignInData): Promise<AuthUser> => {
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
-
-  if (error) throw error;
-  if (!data.user) throw new Error('Sign in failed');
-
-  return {
-    id: data.user.id,
-    email: data.user.email!,
-    name: data.user.user_metadata?.name || email.split('@')[0],
-  };
+export const signIn = async (email: string, password: string): Promise<AuthUser> => {
+  const { user } = await signInWithEmailAndPassword(auth, email, password);
+  return mapFirebaseUser(user);
 };
 
 export const signInWithGoogle = async (): Promise<void> => {
-  const { error } = await supabase.auth.signInWithOAuth({
-    provider: 'google',
-    options: {
-      redirectTo: `${window.location.origin}/dashboard`,
-    }
-  });
-
-  if (error) throw error;
+  // For popup flow — will open Google popup and then authenticate
+  await signInWithPopup(auth, googleProvider);
+  // After popup resolves, onAuthStateChanged will fire and application state updates
 };
 
 export const logout = async (): Promise<void> => {
-  const { error } = await supabase.auth.signOut();
-  if (error) throw error;
+  await signOut(auth);
 };
 
 export const restoreSession = async (): Promise<AuthUser | null> => {
-  const { data: { session }, error } = await supabase.auth.getSession();
-
-  if (error) {
-    console.error('Session restore error:', error);
-    return null;
-  }
-
-  if (!session?.user) return null;
-
-  return {
-    id: session.user.id,
-    email: session.user.email!,
-    name: session.user.user_metadata?.name || session.user.email!.split('@')[0],
-  };
+  // Returns current user (if any). We read current user if available.
+  return new Promise((resolve) => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      unsubscribe();
+      if (!user) return resolve(null);
+      return resolve(mapFirebaseUser(user));
+    });
+  });
 };
 
 export const resetPassword = async (email: string): Promise<void> => {
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${window.location.origin}/reset-password`,
-  });
-
-  if (error) throw error;
+  await sendPasswordResetEmail(auth, email);
 };
 
 export const getCurrentUser = async (): Promise<AuthUser | null> => {
-  const { data: { user }, error } = await supabase.auth.getUser();
-
-  if (error || !user) return null;
-
-  return {
-    id: user.id,
-    email: user.email!,
-    name: user.user_metadata?.name || user.email!.split('@')[0],
-  };
+  const user = auth.currentUser;
+  if (!user) return null;
+  return mapFirebaseUser(user);
 };
 
 export const onAuthStateChange = (callback: (user: AuthUser | null) => void) => {
-  const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-    if (session?.user) {
-      callback({
-        id: session.user.id,
-        email: session.user.email!,
-        name: session.user.user_metadata?.name || session.user.email!.split('@')[0],
-      });
-    } else {
-      callback(null);
-    }
+  const unsubscribe = onAuthStateChanged(auth, (user) => {
+    callback(user ? mapFirebaseUser(user) : null);
   });
-
-  return subscription;
+  return {
+    unsubscribe,
+  };
 };
+
+export const getIdTokenForCurrentUser = async (): Promise<string | null> => {
+  const user = auth.currentUser;
+  if (!user) return null;
+  return getIdToken(user, /* forceRefresh: */ false);
+};
+
+function mapFirebaseUser(user: FirebaseUser): AuthUser {
+  return {
+    id: user.uid,
+    email: user.email ?? "",
+    name: user.displayName ?? undefined,
+    avatar: user.photoURL ?? undefined,
+  };
+}
