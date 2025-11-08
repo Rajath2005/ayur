@@ -2,7 +2,7 @@
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  signInWithPopup,
+  signInWithRedirect,
   signOut,
   onAuthStateChanged,
   sendPasswordResetEmail,
@@ -30,9 +30,9 @@ export const signIn = async (email: string, password: string): Promise<AuthUser>
 };
 
 export const signInWithGoogle = async (): Promise<void> => {
-  // For popup flow — will open Google popup and then authenticate
-  await signInWithPopup(auth, googleProvider);
-  // After popup resolves, onAuthStateChanged will fire and application state updates
+  // Use redirect flow instead of popup to avoid COOP policy issues
+  console.log("Starting Google sign-in redirect...");
+  await signInWithRedirect(auth, googleProvider);
 };
 
 export const logout = async (): Promise<void> => {
@@ -72,7 +72,7 @@ export const onAuthStateChange = (callback: (user: AuthUser | null) => void) => 
 export const getIdTokenForCurrentUser = async (): Promise<string | null> => {
   const user = auth.currentUser;
   if (!user) return null;
-  return getIdToken(user, /* forceRefresh: */ false);
+  return getIdToken(user, /* forceRefresh: */ true);
 };
 
 function mapFirebaseUser(user: FirebaseUser): AuthUser {

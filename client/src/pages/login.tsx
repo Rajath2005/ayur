@@ -57,17 +57,22 @@ export default function Login() {
   };
 
   const handleGoogleSignIn = async () => {
-  setGoogleLoading(true);
-  try {
-    await signInWithGoogle();
-    await refreshUser();
-    setLocation("/dashboard");
-  } catch (error: any) {
-    // ...
-  } finally {
-    setGoogleLoading(false);
-  }
-};
+    setGoogleLoading(true);
+    try {
+      await signInWithGoogle();
+      // Note: With redirect flow, the page will redirect to Google
+      // The AuthContext will handle the result when the user returns
+      // Don't set loading to false here as the page will redirect
+    } catch (error: any) {
+      console.error("Google sign-in error:", error);
+      toast({
+        title: "Google sign-in failed",
+        description: error.message || "Failed to sign in with Google",
+        variant: "destructive",
+      });
+      setGoogleLoading(false);
+    }
+  };
 
 
   return (

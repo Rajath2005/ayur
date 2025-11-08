@@ -20,6 +20,11 @@ const firebaseConfig = {
   measurementId: sanitizeEnv(import.meta.env.VITE_FIREBASE_MEASUREMENT_ID),
 };
 
+// Add localhost to authorized domains for development
+if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+  console.log('Running on localhost - Firebase auth should work with redirect flow');
+}
+
 if (!firebaseConfig.apiKey || !firebaseConfig.authDomain || !firebaseConfig.projectId) {
   console.error("Missing or invalid Firebase config. Ensure VITE_FIREBASE_* env vars are set in client/.env");
   throw new Error("Firebase configuration is incomplete. Check VITE_FIREBASE_* env variables.");
@@ -29,6 +34,12 @@ const app = initializeApp(firebaseConfig);
 
 export const auth: Auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
+
+// Configure Google provider for redirect flow
+googleProvider.setCustomParameters({
+  prompt: 'select_account'
+});
+
 export const db: Firestore = getFirestore(app);
 export const storage: FirebaseStorage = getStorage(app);
 

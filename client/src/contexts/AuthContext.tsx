@@ -1,6 +1,8 @@
 // client/src/contexts/AuthContext.tsx
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { restoreSession, onAuthStateChange, logout as authLogout, getCurrentUser } from "@/services/auth";
+import { getRedirectResult } from "firebase/auth";
+import { auth } from "@/services/firebaseClient";
 import type { AuthUser } from "@/services/auth";
 
 interface AuthContextType {
@@ -24,10 +26,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const initialize = async () => {
       try {
         console.log("Initializing auth...");
+
+        // Check for redirect result first (for Google sign-in redirect flow)
+        try {
+          const redirectResult = await getRedirectResult(auth);
+          if (redirectResult?.user) {
+            console.log("Redirect sign-in successful, user:", redirectResult.user.email);
+            // The onAuthStateChanged listener will handle setting the user
+          } else {
+            console.log("No redirect result found");
+          }
+        } catch (redirectError) {
+          console.log("Redirect result check error:", redirectError);
+        }
+
         const sessionUser = await restoreSession();
-        
+
         if (!mounted) return;
-        
+
         console.log("Session restored:", sessionUser ? "User found" : "No user");
         setUser(sessionUser);
       } catch (err) {
