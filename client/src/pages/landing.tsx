@@ -2,7 +2,7 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { Leaf, MessageCircle, Pill, Calendar, Sparkles, Shield, Clock } from "lucide-react";
+import { Leaf, MessageCircle, Camera, Send, Upload, CheckCircle, ArrowRight } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 export default function Landing() {
@@ -58,69 +58,104 @@ export default function Landing() {
             <div className="flex flex-col justify-center space-y-8">
               <div className="space-y-4">
                 <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
-                  Your Ayurvedic
-                  <span className="block text-primary">Wellness Companion</span>
+                  Chat & Analyze Your Way to
+                  <span className="block text-primary">Ayurvedic Wellness</span>
                 </h1>
                 <p className="text-lg text-muted-foreground leading-relaxed max-w-2xl">
-                  Experience personalized Ayurvedic guidance powered by AI. Get expert advice on natural remedies, 
-                  symptom checking, and holistic health practices rooted in ancient wisdom.
+                  Get instant AI-powered Ayurvedic guidance. Chat about your symptoms or upload an image for personalized insights.
                 </p>
               </div>
-              {!user && (
-                <div className="flex flex-wrap gap-4">
-                  <Link href="/register">
+              <div className="flex flex-wrap gap-4">
+                {user ? (
+                  <Link href="/dashboard">
                     <span className="inline-block">
-                      <Button size="lg" className="gap-2" data-testid="button-hero-start" asChild>
+                      <Button size="lg" className="gap-2" data-testid="button-hero-dashboard" asChild>
                         <span className="cursor-pointer flex items-center gap-2">
-                          <Sparkles className="h-5 w-5" />
-                          Start Your Journey
+                          <ArrowRight className="h-5 w-5" />
+                          Go to Dashboard
                         </span>
                       </Button>
                     </span>
                   </Link>
+                ) : (
                   <Link href="/login">
                     <span className="inline-block">
-                      <Button size="lg" variant="outline" data-testid="button-hero-login" asChild>
+                      <Button size="lg" variant="outline" data-testid="button-hero-signin" asChild>
                         <span className="cursor-pointer">Sign In</span>
                       </Button>
                     </span>
                   </Link>
-                </div>
-              )}
+                )}
+                <Link href={user ? "/dashboard" : "/login"}>
+                  <span className="inline-block">
+                    <Button size="lg" className="gap-2" data-testid="button-hero-chat" asChild>
+                      <span className="cursor-pointer flex items-center gap-2">
+                        <MessageCircle className="h-5 w-5" />
+                        Chat With AI
+                      </span>
+                    </Button>
+                  </span>
+                </Link>
+                <Link href={user ? "/dashboard" : "/login"}>
+                  <span className="inline-block">
+                    <Button size="lg" variant="outline" className="gap-2" data-testid="button-hero-image" asChild>
+                      <span className="cursor-pointer flex items-center gap-2">
+                        <Camera className="h-5 w-5" />
+                        Try Image Analysis
+                      </span>
+                    </Button>
+                  </span>
+                </Link>
+              </div>
             </div>
 
-            {/* Right Column - Visual Element */}
+            {/* Right Column - Chat UI Mockup */}
             <div className="flex items-center justify-center">
-              <div className="relative">
-                <div className="absolute inset-0 bg-primary/10 blur-3xl rounded-full" />
-                <div className="relative bg-card rounded-2xl p-8 shadow-xl border">
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-3 p-4 bg-primary/5 rounded-lg">
-                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                        <Leaf className="h-5 w-5 text-primary" />
+              <div className="relative w-full max-w-md">
+                <div className="absolute inset-0 bg-primary/10 blur-3xl rounded-3xl" />
+                <div className="relative bg-card rounded-3xl shadow-2xl border overflow-hidden">
+                  {/* Chat Header */}
+                  <div className="bg-primary/5 p-4 border-b">
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center">
+                        <Leaf className="h-4 w-4 text-primary" />
                       </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">AI-Powered Insights</p>
-                        <p className="text-xs text-muted-foreground">Ancient wisdom meets modern technology</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3 p-4 bg-primary/5 rounded-lg">
-                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                        <Shield className="h-5 w-5 text-primary" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">Safe & Natural</p>
-                        <p className="text-xs text-muted-foreground">Evidence-based Ayurvedic practices</p>
+                      <div>
+                        <p className="text-sm font-medium">AyurChat AI</p>
+                        <p className="text-xs text-muted-foreground">Online</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3 p-4 bg-primary/5 rounded-lg">
-                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                        <Clock className="h-5 w-5 text-primary" />
+                  </div>
+                  
+                  {/* Chat Messages */}
+                  <div className="p-4 space-y-3 h-64">
+                    <div className="flex justify-start">
+                      <div className="bg-muted rounded-2xl px-3 py-2 max-w-[80%]">
+                        <p className="text-sm">Hello! I can help with Ayurvedic guidance. What symptoms are you experiencing?</p>
                       </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">24/7 Availability</p>
-                        <p className="text-xs text-muted-foreground">Get guidance anytime you need</p>
+                    </div>
+                    <div className="flex justify-end">
+                      <div className="bg-primary text-primary-foreground rounded-2xl px-3 py-2 max-w-[80%]">
+                        <p className="text-sm">I have been feeling tired and having headaches</p>
                       </div>
+                    </div>
+                    <div className="flex justify-start">
+                      <div className="bg-muted rounded-2xl px-3 py-2 max-w-[80%]">
+                        <p className="text-sm">Based on Ayurveda, this could indicate Vata imbalance. Try warm oil massage and...</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Chat Input */}
+                  <div className="p-4 border-t bg-background/50">
+                    <div className="flex items-center gap-2 bg-muted/50 rounded-full px-3 py-2">
+                      <input 
+                        className="flex-1 bg-transparent text-sm placeholder:text-muted-foreground border-0 outline-none" 
+                        placeholder="Type symptoms or upload image..."
+                        disabled
+                      />
+                      <Camera className="h-4 w-4 text-muted-foreground" />
+                      <Send className="h-4 w-4 text-primary" />
                     </div>
                   </div>
                 </div>
@@ -130,70 +165,56 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Features Section */}
+      {/* How It Works Section */}
       <section className="py-20 md:py-32 bg-muted/30">
         <div className="container px-4 md:px-6">
           <div className="text-center space-y-4 mb-16">
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-              Holistic Wellness Features
+              How It Works
             </h2>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              Everything you need for your Ayurvedic wellness journey in one place
+              Get personalized Ayurvedic guidance in three simple steps
             </p>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            <Card className="border-2 hover-elevate transition-all duration-200">
-              <CardContent className="p-6 space-y-4">
-                <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <MessageCircle className="h-6 w-6 text-primary" />
+          <div className="grid gap-8 md:grid-cols-3">
+            <Card className="border-2 hover:shadow-lg transition-all duration-200">
+              <CardContent className="p-8 text-center space-y-4">
+                <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                  <MessageCircle className="h-8 w-8 text-primary" />
                 </div>
                 <div className="space-y-2">
-                  <h3 className="font-semibold text-lg">AI Chat Consultation</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    Chat with our AI-powered Ayurvedic assistant for personalized wellness guidance and answers to your health questions.
+                  <h3 className="font-semibold text-xl">Step 1: Chat Instantly</h3>
+                  <p className="text-muted-foreground leading-relaxed">
+                    Chat and describe symptoms using our NLP-powered Ayurvedic chatbot for instant analysis.
                   </p>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="border-2 hover-elevate transition-all duration-200">
-              <CardContent className="p-6 space-y-4">
-                <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Pill className="h-6 w-6 text-primary" />
+            <Card className="border-2 hover:shadow-lg transition-all duration-200">
+              <CardContent className="p-8 text-center space-y-4">
+                <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                  <Upload className="h-8 w-8 text-primary" />
                 </div>
                 <div className="space-y-2">
-                  <h3 className="font-semibold text-lg">Herbal Remedies</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    Discover natural Ayurvedic remedies tailored to your specific health concerns and constitutional type.
+                  <h3 className="font-semibold text-xl">Step 2: Upload a Photo</h3>
+                  <p className="text-muted-foreground leading-relaxed">
+                    Upload an image of visible symptoms (skin, tongue, eyes) for AI-powered visual analysis.
                   </p>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="border-2 hover-elevate transition-all duration-200">
-              <CardContent className="p-6 space-y-4">
-                <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Sparkles className="h-6 w-6 text-primary" />
+            <Card className="border-2 hover:shadow-lg transition-all duration-200">
+              <CardContent className="p-8 text-center space-y-4">
+                <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                  <CheckCircle className="h-8 w-8 text-primary" />
                 </div>
                 <div className="space-y-2">
-                  <h3 className="font-semibold text-lg">Symptom Analysis</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    Get insights into your symptoms from an Ayurvedic perspective with AI-powered analysis.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-2 hover-elevate transition-all duration-200">
-              <CardContent className="p-6 space-y-4">
-                <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Calendar className="h-6 w-6 text-primary" />
-                </div>
-                <div className="space-y-2">
-                  <h3 className="font-semibold text-lg">Appointment Scheduling</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    Connect with certified Ayurvedic practitioners for in-depth consultations and treatment plans.
+                  <h3 className="font-semibold text-xl">Step 3: Get Your Guidance</h3>
+                  <p className="text-muted-foreground leading-relaxed">
+                    Receive personalized Ayurvedic guidance, remedies, and lifestyle recommendations.
                   </p>
                 </div>
               </CardContent>
@@ -214,20 +235,28 @@ export default function Landing() {
                 <p className="text-muted-foreground text-lg">
                   Join thousands discovering the power of Ayurvedic wisdom combined with modern AI technology.
                 </p>
-                {!user && (
-                  <div className="flex flex-wrap gap-4 justify-center">
-                    <Link href="/register">
-                      <Button size="lg" data-testid="button-cta-start">
-                        Get Started Free
+                <div className="flex flex-wrap gap-4 justify-center">
+                  {user ? (
+                    <Link href="/dashboard">
+                      <Button size="lg" data-testid="button-cta-dashboard">
+                        Go to Dashboard
                       </Button>
                     </Link>
-                    <Link href="/login">
-                      <Button size="lg" variant="outline" data-testid="button-cta-login">
-                        Sign In
-                      </Button>
-                    </Link>
-                  </div>
-                )}
+                  ) : (
+                    <>
+                      <Link href="/register">
+                        <Button size="lg" data-testid="button-cta-start">
+                          Get Started Free
+                        </Button>
+                      </Link>
+                      <Link href="/login">
+                        <Button size="lg" variant="outline" data-testid="button-cta-login">
+                          Sign In
+                        </Button>
+                      </Link>
+                    </>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -246,6 +275,11 @@ export default function Landing() {
             </div>
             <p className="text-sm text-muted-foreground">
               AI-powered Ayurvedic guidance for your holistic health journey
+            </p>
+          </div>
+          <div className="mt-4 pt-4 border-t">
+            <p className="text-xs text-muted-foreground text-center">
+              AyurChat provides AI-generated wellness guidance and is not a medical diagnostic tool. Always consult a certified practitioner.
             </p>
           </div>
         </div>

@@ -37,6 +37,7 @@ export function UserDashboard({ open, onOpenChange }: UserDashboardProps) {
       toast({
         title: "Logged out",
         description: "You have been successfully logged out",
+        variant: "success",
       });
     } catch (error) {
       toast({

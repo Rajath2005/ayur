@@ -59,6 +59,7 @@ export function AppSidebar() {
       toast({
         title: "Conversation deleted",
         description: "The conversation has been removed",
+        variant: "destructive",
       });
     },
   });
@@ -70,6 +71,7 @@ export function AppSidebar() {
       toast({
         title: "Logged out",
         description: "You have been successfully logged out",
+        variant: "success",
       });
     } catch (error) {
       toast({
@@ -202,10 +204,10 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-4 border-t">
+      <SidebarFooter className="p-4 border-t bg-muted/30">
         <Button
-          variant="ghost"
-          className="w-full justify-start gap-2"
+          variant="destructive"
+          className="w-full justify-start gap-2 bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 hover:text-red-800 dark:bg-red-950 dark:text-red-300 dark:border-red-800 dark:hover:bg-red-900 dark:hover:text-red-200 shadow-sm"
           onClick={handleLogout}
           data-testid="button-logout"
         >
