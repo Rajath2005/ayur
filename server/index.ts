@@ -13,12 +13,17 @@ import cors from "cors";
 // CORS middleware
 app.use(
   cors({
-    origin: "https://ayudost-chatbot.onrender.com",
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    origin: [
+      "https://ayudost-chatbot.onrender.com",
+      "http://localhost:5173",
+      "http://localhost:3000",
+    ],
+    methods: ["GET", "POST", "PUT, DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   })
 );
+
 
 // Request logging middleware
 app.use((req, res, next) => {

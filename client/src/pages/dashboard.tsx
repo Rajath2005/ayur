@@ -1,15 +1,18 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { MessageSquare, Sparkles, Calendar, TrendingUp, User } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
+import { UserDashboard } from "@/components/user-dashboard";
 import type { Conversation } from "@shared/schema";
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const [isUserDashboardOpen, setIsUserDashboardOpen] = useState(false);
   const { data: conversations = [] } = useQuery<Conversation[]>({
     queryKey: ["/api/conversations"],
   });
@@ -54,20 +57,28 @@ export default function Dashboard() {
           <header className="flex items-center justify-between p-4 border-b">
             <SidebarTrigger data-testid="button-sidebar-toggle" />
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-3">
+              <button
+                onClick={() => setIsUserDashboardOpen(true)}
+                className="flex items-center gap-3 hover:opacity-80 transition-opacity cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-lg px-2 py-1"
+                data-testid="button-user-profile"
+              >
                 <Avatar className="h-8 w-8">
+                  {user?.avatar && (
+                    <AvatarImage src={user.avatar} alt={user?.name || user?.email || "User"} />
+                  )}
                   <AvatarFallback className="bg-primary text-primary-foreground">
                     {user?.name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'U'}
                   </AvatarFallback>
                 </Avatar>
-                <div className="hidden md:block">
+                <div className="hidden md:block text-left">
                   <p className="text-sm font-medium">{user?.name || user?.email}</p>
                   <p className="text-xs text-muted-foreground">{user?.email}</p>
                 </div>
-              </div>
+              </button>
               <ThemeToggle />
             </div>
           </header>
+          <UserDashboard open={isUserDashboardOpen} onOpenChange={setIsUserDashboardOpen} />
           <main className="flex-1 overflow-auto p-6">
             <div className="max-w-7xl mx-auto space-y-8">
               <div>

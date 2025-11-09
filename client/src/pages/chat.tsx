@@ -8,7 +8,9 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { UserDashboard } from "@/components/user-dashboard";
+import { useAuth } from "@/contexts/AuthContext";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Message, Conversation } from "@shared/schema";
@@ -23,6 +25,8 @@ export default function ChatPage() {
   const [, params] = useRoute("/chat/:id");
   const conversationId = params?.id || "";
   const { toast } = useToast();
+  const { user } = useAuth();
+  const [isUserDashboardOpen, setIsUserDashboardOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -139,8 +143,29 @@ export default function ChatPage() {
                 </p>
               </div>
             </div>
-            <ThemeToggle />
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setIsUserDashboardOpen(true)}
+                className="flex items-center gap-3 hover:opacity-80 transition-opacity cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-lg px-2 py-1"
+                data-testid="button-user-profile"
+              >
+                <Avatar className="h-8 w-8">
+                  {user?.avatar && (
+                    <AvatarImage src={user.avatar} alt={user?.name || user?.email || "User"} />
+                  )}
+                  <AvatarFallback className="bg-primary text-primary-foreground">
+                    {user?.name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'U'}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="hidden md:block text-left">
+                  <p className="text-sm font-medium">{user?.name || user?.email}</p>
+                  <p className="text-xs text-muted-foreground">{user?.email}</p>
+                </div>
+              </button>
+              <ThemeToggle />
+            </div>
           </header>
+          <UserDashboard open={isUserDashboardOpen} onOpenChange={setIsUserDashboardOpen} />
 
           <ScrollArea className="flex-1 p-6" ref={scrollRef}>
             <div className="max-w-4xl mx-auto space-y-6">
