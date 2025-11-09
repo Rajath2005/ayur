@@ -53,7 +53,12 @@ export class DbStorage implements IStorage {
   }
 
   async createConversation(insertConversation: InsertConversation): Promise<Conversation> {
-    const result = await db.insert(conversations).values(insertConversation).returning();
+    const data = {
+      ...(insertConversation.id && { id: insertConversation.id }),
+      userId: insertConversation.userId,
+      title: insertConversation.title,
+    };
+    const result = await db.insert(conversations).values(data).returning();
     return result[0];
   }
 
@@ -86,6 +91,23 @@ export class DbStorage implements IStorage {
   async createMessage(insertMessage: InsertMessage): Promise<Message> {
     const result = await db.insert(messages).values(insertMessage).returning();
     return result[0];
+  }
+
+  async updateMessage(id: string, updates: Partial<Message>): Promise<Message> {
+    const result = await db
+      .update(messages)
+      .set(updates)
+      .where(eq(messages.id, id))
+      .returning();
+    
+    if (!result[0]) {
+      throw new Error("Message not found");
+    }
+    return result[0];
+  }
+
+  async updateMessageByConversation(conversationId: string, messageId: string, updates: Partial<Message>): Promise<Message> {
+    return this.updateMessage(messageId, updates);
   }
 
   // Appointments

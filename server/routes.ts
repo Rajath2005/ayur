@@ -3,7 +3,6 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { 
   insertConversationSchema,
-  chatMessageSchema,
   type User 
 } from "@shared/schema";
 import { 
@@ -61,16 +60,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/conversations", verifyFirebaseToken, async (req: AuthRequest, res: Response) => {
     try {
       const userId = req.user!.uid;
-      const data = insertConversationSchema.parse({
-        ...req.body,
+      if (!req.body.title) {
+        return res.status(400).json({ message: "Title is required" });
+      }
+      const data = {
         userId,
-      });
-
+        title: req.body.title,
+      };
       const conversation = await storage.createConversation(data);
       res.json(conversation);
     } catch (error: any) {
       console.error("Create conversation error:", error);
-      res.status(400).json({ message: error.message || "Failed to create conversation" });
+      console.error("Error stack:", error.stack);
+      res.status(500).json({ message: error.message || "Failed to create conversation" });
+    }
+  });
+
+  app.put("/api/conversations/:id", verifyFirebaseToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const conversation = await storage.getConversation(req.params.id);
+      if (!conversation) {
+        return res.status(404).json({ message: "Conversation not found" });
+      }
+
+      const userId = req.user!.uid;
+      if (conversation.userId !== userId) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+
+      const { title } = req.body;
+      if (!title || typeof title !== "string") {
+        return res.status(400).json({ message: "Title is required" });
+      }
+
+      const updatedConversation = await storage.updateConversation(req.params.id, { title });
+      res.json(updatedConversation);
+    } catch (error) {
+      console.error("Update conversation error:", error);
+      res.status(500).json({ message: "Failed to update conversation" });
     }
   });
 
@@ -115,56 +142,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // CHAT ROUTE (with AI response)
+  // CHAT ROUTE (with streaming AI response)
   app.post("/api/chat", verifyFirebaseToken, async (req: AuthRequest, res: Response) => {
     try {
       const userId = req.user!.uid;
-      const data = chatMessageSchema.parse(req.body);
+      const { conversationId, content } = req.body;
 
-      // Verify conversation belongs to user
-      const conversation = await storage.getConversation(data.conversationId);
-      if (!conversation || conversation.userId !== userId) {
+      if (!conversationId || !content) {
+        return res.status(400).json({ message: "conversationId and content are required" });
+      }
+
+      let conversation = await storage.getConversation(conversationId);
+
+      if (!conversation) {
+        return res.status(404).json({ message: "Conversation not found" });
+      } else if (conversation.userId !== userId) {
         return res.status(403).json({ message: "Forbidden" });
       }
 
-      // Save user message
+      // 1. Save user message
       const userMessage = await storage.createMessage({
-        conversationId: data.conversationId,
+        conversationId,
         role: "user",
-        content: data.content,
-        attachments: data.attachments || null,
+        content,
+        attachments: null,
       });
 
-      // Get conversation history for context
-      const history = await storage.getMessagesByConversationId(data.conversationId);
-      const conversationHistory = history.slice(-5).map(msg => ({
-        role: msg.role,
-        content: msg.content
+      // 2. Get conversation history for AI context
+      const history = await storage.getMessagesByConversationId(conversationId);
+      const conversationHistory = history.slice(-10).map((msg) => ({
+        role: msg.role as 'user' | 'assistant',
+        content: msg.content,
       }));
 
-      // Get AI response
-      const aiResponse = await getChatResponse(data.content, conversationHistory);
+      // 3. Get AI response
+      const aiResponse = await getChatResponse(content, conversationHistory);
 
-      // Save AI message
-      const aiMessage = await storage.createMessage({
-        conversationId: data.conversationId,
+      // 4. Save AI message
+      const assistantMessage = await storage.createMessage({
+        conversationId,
         role: "assistant",
         content: aiResponse.content,
         attachments: null,
       });
 
-      // Update conversation title if it's the first message
-      if (history.length === 0) {
-        const title = data.content.slice(0, 50) + (data.content.length > 50 ? "..." : "");
-        await storage.updateConversation(data.conversationId, { title });
+      // 5. Update conversation title if it's the first message and title is "New Conversation"
+      if (history.length <= 1 && conversation.title === "New Conversation") {
+        const title = content.slice(0, 50) + (content.length > 50 ? "..." : "");
+        await storage.updateConversation(conversationId, { title, updatedAt: new Date() });
+      } else {
+        await storage.updateConversation(conversationId, { updatedAt: new Date() });
       }
 
-      // Update conversation timestamp
-      await storage.updateConversation(data.conversationId, { 
-        updatedAt: new Date() 
-      });
-
-      res.json({ userMessage, aiMessage });
+      res.json({ userMessage, assistantMessage });
     } catch (error: any) {
       console.error("Chat error:", error);
       res.status(500).json({ message: error.message || "Failed to send message" });

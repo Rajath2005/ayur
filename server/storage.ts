@@ -24,6 +24,8 @@ export interface IStorage {
   // Messages
   getMessagesByConversationId(conversationId: string): Promise<Message[]>;
   createMessage(message: InsertMessage): Promise<Message>;
+  updateMessage(id: string, updates: Partial<Message>): Promise<Message>;
+  updateMessageByConversation?(conversationId: string, messageId: string, updates: Partial<Message>): Promise<Message>;
   
   // Appointments
   createAppointment(appointment: InsertAppointment): Promise<Appointment>;
@@ -85,10 +87,11 @@ export class MemStorage implements IStorage {
   }
 
   async createConversation(insertConversation: InsertConversation): Promise<Conversation> {
-    const id = randomUUID();
+    const id = insertConversation.id || randomUUID();
     const now = new Date();
     const conversation: Conversation = {
-      ...insertConversation,
+      userId: insertConversation.userId,
+      title: insertConversation.title,
       id,
       createdAt: now,
       updatedAt: now,
@@ -129,7 +132,7 @@ export class MemStorage implements IStorage {
   }
 
   async createMessage(insertMessage: InsertMessage): Promise<Message> {
-    const id = randomUUID();
+    const id = insertMessage.id || randomUUID();
     const message: Message = {
       id,
       conversationId: insertMessage.conversationId,
@@ -140,6 +143,20 @@ export class MemStorage implements IStorage {
     };
     this.messages.set(id, message);
     return message;
+  }
+
+  async updateMessage(id: string, updates: Partial<Message>): Promise<Message> {
+    const message = this.messages.get(id);
+    if (!message) {
+      throw new Error("Message not found");
+    }
+    const updated = { ...message, ...updates };
+    this.messages.set(id, updated);
+    return updated;
+  }
+
+  async updateMessageByConversation(conversationId: string, messageId: string, updates: Partial<Message>): Promise<Message> {
+    return this.updateMessage(messageId, updates);
   }
 
   // Appointments
@@ -164,9 +181,7 @@ export class MemStorage implements IStorage {
   }
 }
 
-// Use database storage if DATABASE_URL is available, otherwise use in-memory
-import { DbStorage } from "./db-storage";
+// Use storage factory for proper initialization
+import { storage } from "./storage-factory";
 
-export const storage = process.env.DATABASE_URL 
-  ? new DbStorage() 
-  : new MemStorage();
+export { storage };

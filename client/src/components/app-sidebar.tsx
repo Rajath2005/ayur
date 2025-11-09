@@ -1,6 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Plus, MessageSquare, Trash2, Leaf, LogOut, Sparkles, Pill, Calendar } from "lucide-react";
+import { Plus, MessageSquare, Trash2, Leaf, LogOut, Edit3 } from "lucide-react";
+import { useState } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -14,6 +15,7 @@ import {
   SidebarFooter,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Conversation } from "@shared/schema";
@@ -23,7 +25,9 @@ import { useAuth } from "@/contexts/AuthContext";
 export function AppSidebar() {
   const [location, setLocation] = useLocation();
   const { toast } = useToast();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
 
   const { data: conversations = [], isLoading } = useQuery<Conversation[]>({
     queryKey: ["/api/conversations"],
@@ -64,6 +68,47 @@ export function AppSidebar() {
     },
   });
 
+  const updateConversationMutation = useMutation({
+    mutationFn: async ({ id, title }: { id: string; title: string }) => {
+      const res = await apiRequest("PUT", `/api/conversations/${id}`, { title });
+      if (!res.ok) throw new Error("Rename failed");
+      return { id, title };
+    },
+    onMutate: async ({ id, title }) => {
+      // Optimistically update UI
+      await queryClient.cancelQueries({ queryKey: ["/api/conversations"] });
+      const prev = queryClient.getQueryData<Conversation[]>(["/api/conversations"]);
+      if (prev) {
+        queryClient.setQueryData(["/api/conversations"], prev.map(c => c.id === id ? { ...c, title } : c));
+      }
+      return { prev };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
+      setEditingId(null);
+      setEditTitle("");
+      toast({
+        title: "Conversation renamed",
+        description: "The conversation title has been updated",
+        variant: "success",
+      });
+    },
+    onError: (_err, _vars, ctx) => {
+      // Rollback optimistic update
+      if (ctx?.prev) {
+        queryClient.setQueryData(["/api/conversations"], ctx.prev);
+      }
+      toast({
+        title: "Error",
+        description: "Could not rename conversation",
+        variant: "destructive",
+      });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
+    },
+  });
+
   const handleLogout = async () => {
     try {
       await logout();
@@ -82,32 +127,31 @@ export function AppSidebar() {
     }
   };
 
-  const quickActions = [
-    {
-      title: "Symptom Check",
-      icon: Sparkles,
-      action: () => {
-        createConversationMutation.mutate();
-      },
-      testId: "button-symptom-check",
-    },
-    {
-      title: "Herbal Remedies",
-      icon: Pill,
-      action: () => {
-        createConversationMutation.mutate();
-      },
-      testId: "button-remedies",
-    },
-    {
-      title: "Book Appointment",
-      icon: Calendar,
-      action: () => {
-        createConversationMutation.mutate();
-      },
-      testId: "button-appointment",
-    },
-  ];
+  const handleRename = (conversation: Conversation) => {
+    setEditingId(conversation.id);
+    setEditTitle(conversation.title);
+  };
+
+  const handleSaveRename = () => {
+    if (!editingId) {
+      handleCancelRename();
+      return;
+    }
+    
+    const newTitle = editTitle.trim();
+    if (!newTitle) {
+      handleCancelRename();
+      return;
+    }
+    
+    console.log('Saving rename:', { id: editingId, title: newTitle });
+    updateConversationMutation.mutate({ id: editingId, title: newTitle });
+  };
+
+  const handleCancelRename = () => {
+    setEditingId(null);
+    setEditTitle("");
+  };
 
   return (
     <Sidebar>
@@ -135,31 +179,15 @@ export function AppSidebar() {
           </div>
         </SidebarGroup>
 
-        <SidebarGroup>
-          <SidebarGroupLabel>Quick Actions</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <div className="grid grid-cols-1 gap-2 px-4">
-              {quickActions.map((action) => (
-                <Button
-                  key={action.title}
-                  variant="outline"
-                  className="justify-start gap-2"
-                  onClick={action.action}
-                  data-testid={action.testId}
-                >
-                  <action.icon className="h-4 w-4" />
-                  {action.title}
-                </Button>
-              ))}
-            </div>
-          </SidebarGroupContent>
-        </SidebarGroup>
 
-        <SidebarGroup>
-          <SidebarGroupLabel>Recent Conversations</SidebarGroupLabel>
+
+        <SidebarGroup className="flex-1">
+          <SidebarGroupLabel className="px-4 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+            Recent Conversations
+          </SidebarGroupLabel>
           <SidebarGroupContent>
-            <ScrollArea className="h-[400px]">
-              <SidebarMenu>
+            <ScrollArea className="h-full px-2">
+              <SidebarMenu className="space-y-1">
                 {isLoading ? (
                   <div className="px-4 py-8 text-center text-sm text-muted-foreground">
                     Loading...
@@ -169,34 +197,71 @@ export function AppSidebar() {
                     No conversations yet
                   </div>
                 ) : (
-                  conversations.map((conversation) => (
-                    <SidebarMenuItem key={conversation.id}>
-                      <div className="group flex items-center gap-2 px-4">
-                        <SidebarMenuButton
-                          asChild
-                          isActive={location === `/chat/${conversation.id}`}
-                          className="flex-1"
-                        >
-                          <Link href={`/chat/${conversation.id}`}>
-                            <MessageSquare className="h-4 w-4" />
-                            <span className="truncate">{conversation.title}</span>
-                          </Link>
-                        </SidebarMenuButton>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            deleteConversationMutation.mutate(conversation.id);
-                          }}
-                          data-testid={`button-delete-${conversation.id}`}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </SidebarMenuItem>
-                  ))
+                  conversations.map((conversation) => {
+                    const isActive = location === `/chat/${conversation.id}`;
+                    const isEditing = editingId === conversation.id;
+                    
+                    return (
+                      <SidebarMenuItem key={conversation.id}>
+                        <div className={`group flex items-center gap-2 px-2 py-2 rounded-lg transition-all hover:bg-muted/50 ${
+                          isActive ? 'bg-primary/10 border border-primary/20' : ''
+                        }`}>
+                          <MessageSquare className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          
+                          {isEditing ? (
+                            <input
+                              value={editTitle}
+                              onChange={(e) => setEditTitle(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  handleSaveRename();
+                                }
+                                if (e.key === 'Escape') {
+                                  e.preventDefault();
+                                  handleCancelRename();
+                                }
+                              }}
+                              onBlur={handleSaveRename}
+                              className="flex-1 bg-transparent text-sm px-1 border-b border-primary/50 focus:outline-none"
+                              autoFocus
+                            />
+                          ) : (
+                            <Link href={`/chat/${conversation.id}`} className="flex-1 min-w-0">
+                              <span className="text-sm truncate block">{conversation.title}</span>
+                            </Link>
+                          )}
+                          
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 hover:bg-muted"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRename(conversation);
+                              }}
+                              data-testid={`button-rename-${conversation.id}`}
+                            >
+                              <Edit3 className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 hover:bg-red-100 hover:text-red-600"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deleteConversationMutation.mutate(conversation.id);
+                              }}
+                              data-testid={`button-delete-${conversation.id}`}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      </SidebarMenuItem>
+                    );
+                  })
                 )}
               </SidebarMenu>
             </ScrollArea>
@@ -204,9 +269,9 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-4 border-t bg-muted/30">
+      <SidebarFooter className="p-4 border-t">
         <Button
-          variant="destructive"
+          variant="ghost"
           className="w-full justify-start gap-2 bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 hover:text-red-800 dark:bg-red-950 dark:text-red-300 dark:border-red-800 dark:hover:bg-red-900 dark:hover:text-red-200 shadow-sm"
           onClick={handleLogout}
           data-testid="button-logout"

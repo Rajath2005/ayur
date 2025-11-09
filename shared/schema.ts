@@ -48,14 +48,16 @@ export const insertUserSchema = createInsertSchema(users).omit({
 });
 
 export const insertConversationSchema = createInsertSchema(conversations).omit({
-  id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  id: z.string().optional(),
 });
 
 export const insertMessageSchema = createInsertSchema(messages).omit({
-  id: true,
   createdAt: true,
+}).extend({
+  id: z.string().optional(),
 });
 
 export const insertAppointmentSchema = createInsertSchema(appointments).omit({

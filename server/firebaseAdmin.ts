@@ -16,11 +16,17 @@ for (const envPath of envPaths) {
 
 const serviceAccountEnv = process.env.FIREBASE_SERVICE_ACCOUNT;
 
+let firebaseInitialized = false;
+
 if (!admin.apps.length) {
   // Prefer the single JSON env var (legacy in this repo)
   if (serviceAccountEnv) {
     try {
+      console.log("🔧 Parsing Firebase service account...");
       const serviceAccount = JSON.parse(serviceAccountEnv);
+      
+      console.log("📋 Service account project_id:", serviceAccount.project_id);
+      console.log("📋 Service account client_email:", serviceAccount.client_email);
 
       if (
         serviceAccount &&
@@ -33,11 +39,14 @@ if (!admin.apps.length) {
 
       admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
+        projectId: serviceAccount.project_id,
       });
 
+      firebaseInitialized = true;
       console.log("✅ Firebase Admin initialized from FIREBASE_SERVICE_ACCOUNT");
     } catch (error) {
-      console.error("❌ Failed to parse FIREBASE_SERVICE_ACCOUNT:", error);
+      console.error("❌ Failed to initialize Firebase Admin:", error);
+      firebaseInitialized = false;
     }
   } else if (
     process.env.FIREBASE_PROJECT_ID &&
@@ -57,13 +66,27 @@ if (!admin.apps.length) {
         credential: admin.credential.cert(cert),
       });
 
+      firebaseInitialized = true;
       console.log("✅ Firebase Admin initialized from FIREBASE_PROJECT_ID/FIREBASE_CLIENT_EMAIL/FIREBASE_PRIVATE_KEY");
     } catch (error) {
       console.error("❌ Failed to initialize Firebase Admin from separate env vars:", error);
+      firebaseInitialized = false;
     }
   } else {
-    console.warn("❌ Firebase Admin not initialized. Provide FIREBASE_SERVICE_ACCOUNT JSON or FIREBASE_PROJECT_ID/CLIENT_EMAIL/PRIVATE_KEY env vars.");
+    try {
+      admin.initializeApp(); // uses Application Default Credentials (ADC)
+      firebaseInitialized = true;
+      console.log("✅ Firebase Admin initialized from Application Default Credentials");
+    } catch (error) {
+      console.error("❌ Failed to initialize Firebase Admin from ADC:", error);
+      firebaseInitialized = false;
+    }
   }
+} else {
+  firebaseInitialized = true;
+  console.log("✅ Firebase Admin already initialized");
 }
+
+export { firebaseInitialized };
 
 export { admin };

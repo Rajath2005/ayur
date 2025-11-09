@@ -1,25 +1,22 @@
 import { useState, useEffect, useRef } from "react";
 import { useRoute } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Send, Paperclip, Smile, Mic, Loader2, X } from "lucide-react";
+import { Send, Loader2, Copy, RotateCcw, Download } from "lucide-react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { UserDashboard } from "@/components/user-dashboard";
 import { useAuth } from "@/contexts/AuthContext";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+import { queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast"; 
+import { getMessages, getConversation } from "@/services/firestore";
+import { apiRequest } from "@/lib/queryClient";
 import type { Message, Conversation } from "@shared/schema";
-import EmojiPicker, { EmojiClickData } from "emoji-picker-react";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 
 export default function ChatPage() {
   const [, params] = useRoute("/chat/:id");
@@ -29,44 +26,97 @@ export default function ChatPage() {
   const [isUserDashboardOpen, setIsUserDashboardOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [attachments, setAttachments] = useState<File[]>([]);
-  const [isRecording, setIsRecording] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const { data: conversation } = useQuery<Conversation>({
-    queryKey: ["/api/conversations", conversationId],
+  const quickSuggestions = [
+    "What's my dosha type?",
+    "Natural remedies for stress",
+    "Ayurvedic diet tips",
+    "Morning routine suggestions",
+    "Herbs for better sleep"
+  ];
+
+  const { data: conversation } = useQuery<Conversation | null>({
+    queryKey: ["conversations", conversationId],
+    queryFn: async () => {
+      const conv = await getConversation(conversationId);
+      if (!conv) return null;
+      return conv;
+    },
     enabled: !!conversationId,
   });
 
   const { data: messages = [], isLoading } = useQuery<Message[]>({
-    queryKey: ["/api/messages", conversationId],
+    queryKey: ["messages", conversationId],
+    queryFn: () => getMessages(conversationId),
     enabled: !!conversationId,
+    staleTime: 0, // Always fetch fresh data
   });
 
   const sendMessageMutation = useMutation({
-    mutationFn: async (content: string) => {
-      const result = await apiRequest("POST", "/api/chat", {
-        conversationId,
-        content,
-        attachments: attachments.length > 0 ? attachments.map(f => ({ name: f.name, type: f.type, size: f.size })) : undefined,
-      });
-      return result;
+    mutationFn: async ({ content }: { content: string }) => {
+      const res = await apiRequest("POST", "/api/chat", { conversationId, content });
+      if (!res.ok) {
+        throw new Error("Failed to send message");
+      }
+      return res.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/messages", conversationId] });
-      queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
+    onMutate: async ({ content }: { content: string }) => {
+      await queryClient.cancelQueries({ queryKey: ["messages", conversationId] });
+
+      const previousMessages = queryClient.getQueryData<Message[]>(["messages", conversationId]) || [];
+
+      const userMessage: Message = {
+        id: `user-${Date.now()}`,
+        conversationId,
+        role: "user",
+        content,
+        attachments: null,
+        createdAt: new Date(),
+      };
+
+      const assistantMessage: Message = {
+        id: `assistant-${Date.now()}`,
+        conversationId,
+        role: "assistant",
+        content: "",
+        attachments: null,
+        createdAt: new Date(),
+      };
+
+      queryClient.setQueryData(["messages", conversationId], (old: Message[] = []) => [
+        ...old,
+        userMessage,
+        assistantMessage,
+      ]);
+
       setMessage("");
-      setAttachments([]);
-      
-      // Simulate AI typing
       setIsTyping(true);
-      setTimeout(() => {
-        setIsTyping(false);
-      }, 2000);
+
+      return { previousMessages };
+    },
+    onSuccess: (data) => {
+      // Optimistically update with the real messages returned from the API
+      queryClient.setQueryData<Message[]>(["messages", conversationId], (old) => {
+        if (!old) return [data.userMessage, data.assistantMessage];
+        // Replace the temporary messages with the real ones from the server
+        const newMessages = old.slice(0, -2);
+        return [...newMessages, data.userMessage, data.assistantMessage];
+      });
+
+      // Invalidate to ensure consistency and update conversation list
+      queryClient.invalidateQueries({ queryKey: ["messages", conversationId], exact: true });
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
+      setIsTyping(false);
+
+      // Auto-scroll to the new message
+      if (scrollRef.current) {
+        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      }
     },
     onError: () => {
+      setIsTyping(false);
       toast({
         title: "Error",
         description: "Could not send message",
@@ -75,49 +125,51 @@ export default function ChatPage() {
     },
   });
 
+  const copyMessage = (content: string) => {
+    navigator.clipboard.writeText(content);
+    toast({ title: "Copied to clipboard" });
+  };
+
+  const regenerateMessage = (messageContent: string) => {
+    sendMessageMutation.mutate({ content: messageContent });
+  };
+
+  const exportConversation = () => {
+    const content = messages.map(m => `${m.role.toUpperCase()}: ${m.content}`).join('\n\n');
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ayur-chat-${conversation?.title || 'conversation'}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+
+
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages, isTyping]);
 
+  useEffect(() => {
+    // Auto-resize textarea
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
+    }
+  }, [message]);
+
   const handleSend = () => {
-    if (!message.trim() && attachments.length === 0) return;
-    sendMessageMutation.mutate(message);
+    if (!message.trim() || sendMessageMutation.isPending) return;
+    sendMessageMutation.mutate({ content: message });
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
-    }
-  };
-
-  const handleEmojiClick = (emojiData: EmojiClickData) => {
-    setMessage((prev) => prev + emojiData.emoji);
-    setShowEmojiPicker(false);
-  };
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    setAttachments((prev) => [...prev, ...files]);
-  };
-
-  const removeAttachment = (index: number) => {
-    setAttachments((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const toggleRecording = () => {
-    setIsRecording(!isRecording);
-    if (!isRecording) {
-      toast({
-        title: "Recording started",
-        description: "Speak your message (simulated)",
-      });
-      setTimeout(() => {
-        setIsRecording(false);
-        setMessage("This is a simulated voice message transcription.");
-      }, 2000);
     }
   };
 
@@ -144,6 +196,15 @@ export default function ChatPage() {
               </div>
             </div>
             <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={exportConversation}
+                disabled={messages.length === 0}
+                className="h-8 w-8 p-0"
+              >
+                <Download className="h-4 w-4" />
+              </Button>
               <button
                 onClick={() => setIsUserDashboardOpen(true)}
                 className="flex items-center gap-3 hover:opacity-80 transition-opacity cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-lg px-2 py-1"
@@ -167,8 +228,8 @@ export default function ChatPage() {
           </header>
           <UserDashboard open={isUserDashboardOpen} onOpenChange={setIsUserDashboardOpen} />
 
-          <ScrollArea className="flex-1 p-6" ref={scrollRef}>
-            <div className="max-w-4xl mx-auto space-y-6">
+          <ScrollArea className="flex-1" ref={scrollRef}>
+            <div className="max-w-3xl mx-auto px-4 py-6 space-y-4">
               {isLoading ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -176,12 +237,26 @@ export default function ChatPage() {
               ) : messages.length === 0 ? (
                 <div className="text-center py-12">
                   <div className="inline-flex items-center justify-center h-16 w-16 rounded-full bg-primary/10 mb-4">
-                    <Smile className="h-8 w-8 text-primary" />
+                    <svg className="h-8 w-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    </svg>
                   </div>
                   <h3 className="text-lg font-semibold mb-2">Start Your Wellness Journey</h3>
-                  <p className="text-muted-foreground max-w-md mx-auto">
+                  <p className="text-muted-foreground max-w-md mx-auto mb-6">
                     Ask me anything about Ayurvedic practices, natural remedies, or your health concerns.
                   </p>
+                  <div className="flex flex-wrap gap-2 justify-center max-w-2xl mx-auto">
+                    {quickSuggestions.map((suggestion) => (
+                      <Badge
+                        key={suggestion}
+                        variant="secondary"
+                        className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors px-3 py-1"
+                        onClick={() => setMessage(suggestion)}
+                      >
+                        {suggestion}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
               ) : (
                 messages.map((msg) => (
@@ -191,128 +266,86 @@ export default function ChatPage() {
                     data-testid={`message-${msg.role}-${msg.id}`}
                   >
                     {msg.role === "assistant" && (
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback className="bg-primary text-primary-foreground">AI</AvatarFallback>
+                      <Avatar className="h-8 w-8 flex-shrink-0">
+                        <AvatarFallback className="bg-green-600 text-white text-xs">🌿</AvatarFallback>
                       </Avatar>
                     )}
-                    <div
-                      className={`rounded-2xl px-4 py-3 max-w-[80%] ${
-                        msg.role === "user"
-                          ? "bg-primary text-primary-foreground ml-auto"
-                          : "bg-muted"
-                      }`}
-                    >
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                    <div className="group relative max-w-[75%]">
+                      <div
+                        className={`rounded-2xl px-4 py-3 break-words ${
+                          msg.role === "user"
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted border"
+                        }`}
+                      >
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                      </div>
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute -bottom-8 left-0 flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => copyMessage(msg.content)}
+                          className="h-6 px-2 text-xs"
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                        {msg.role === "user" && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => regenerateMessage(msg.content)}
+                            className="h-6 px-2 text-xs"
+                          >
+                            <RotateCcw className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
                     {msg.role === "user" && (
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback className="bg-secondary">U</AvatarFallback>
+                      <Avatar className="h-8 w-8 flex-shrink-0">
+                        {user?.avatar ? (
+                          <AvatarImage src={user.avatar} alt={user?.name || "User"} />
+                        ) : null}
+                        <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                          {user?.name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'U'}
+                        </AvatarFallback>
                       </Avatar>
                     )}
                   </div>
                 ))
               )}
 
-              {isTyping && (
-                <div className="flex gap-3 justify-start">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-primary text-primary-foreground">AI</AvatarFallback>
-                  </Avatar>
-                  <div className="rounded-2xl px-4 py-3 bg-muted">
-                    <div className="flex gap-1">
-                      <span className="w-2 h-2 bg-muted-foreground rounded-full animate-pulse" />
-                      <span className="w-2 h-2 bg-muted-foreground rounded-full animate-pulse delay-75" />
-                      <span className="w-2 h-2 bg-muted-foreground rounded-full animate-pulse delay-150" />
-                    </div>
-                  </div>
-                </div>
-              )}
+
             </div>
           </ScrollArea>
 
           <div className="border-t p-4">
-            <div className="max-w-4xl mx-auto">
-              {attachments.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {attachments.map((file, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center gap-2 px-3 py-2 bg-muted rounded-lg text-sm"
-                    >
-                      <Paperclip className="h-4 w-4" />
-                      <span className="max-w-[150px] truncate">{file.name}</span>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-4 w-4 p-0"
-                        onClick={() => removeAttachment(index)}
-                        data-testid={`button-remove-attachment-${index}`}
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <div className="flex items-end gap-2">
-                <div className="flex-1 relative">
+            <div className="max-w-3xl mx-auto">
+              <div className="flex items-end gap-3">
+                <div className="flex-1">
                   <Textarea
-                    placeholder="Type your message..."
+                    ref={textareaRef}
+                    placeholder="Ask me about Ayurvedic wellness..."
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
                     onKeyDown={handleKeyPress}
-                    className="resize-none pr-24"
+                    className="resize-none min-h-[44px] max-h-[120px] rounded-2xl border-2 focus:border-primary"
                     rows={1}
                     data-testid="input-message"
+                    disabled={sendMessageMutation.isPending}
                   />
-                  <div className="absolute right-2 bottom-2 flex items-center gap-1">
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      multiple
-                      className="hidden"
-                      onChange={handleFileSelect}
-                      data-testid="input-file"
-                    />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => fileInputRef.current?.click()}
-                      data-testid="button-attach"
-                    >
-                      <Paperclip className="h-4 w-4" />
-                    </Button>
-                    <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
-                      <PopoverTrigger asChild>
-                        <Button variant="ghost" size="icon" data-testid="button-emoji">
-                          <Smile className="h-4 w-4" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="end">
-                        <EmojiPicker onEmojiClick={handleEmojiClick} />
-                      </PopoverContent>
-                    </Popover>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={toggleRecording}
-                      className={isRecording ? "text-destructive" : ""}
-                      data-testid="button-mic"
-                    >
-                      <Mic className={`h-4 w-4 ${isRecording ? "animate-pulse" : ""}`} />
-                    </Button>
-                  </div>
                 </div>
                 <Button
                   onClick={handleSend}
-                  disabled={(!message.trim() && attachments.length === 0) || sendMessageMutation.isPending}
+                  disabled={!message.trim() || sendMessageMutation.isPending}
+                  size="icon"
+                  className="h-11 w-11 rounded-full"
                   data-testid="button-send"
                 >
                   {sendMessageMutation.isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2 className="h-5 w-5 animate-spin" />
                   ) : (
-                    <Send className="h-4 w-4" />
+                    <Send className="h-5 w-5" />
                   )}
                 </Button>
               </div>
