@@ -11,7 +11,9 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { ScrollArea } from "@/components/ui/scroll-area";
+// Using a native scrolling container inside the dialog to avoid
+// Radix ScrollArea's internal inline `display: table` on its
+// inner wrapper which can prevent scrolling in some desktop layouts.
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
@@ -60,7 +62,7 @@ export function UserDashboard({ open, onOpenChange }: UserDashboardProps) {
         </DialogHeader>
 
         <div className="flex-1 min-h-0">
-          <ScrollArea className="h-full">
+          <div className="h-full overflow-auto">
             <div className="space-y-4 sm:space-y-6 px-4 py-4 sm:px-6 sm:py-6">
             {/* User Info Section */}
             <div className="flex items-center gap-3 sm:gap-4">
@@ -189,7 +191,7 @@ export function UserDashboard({ open, onOpenChange }: UserDashboardProps) {
               {isLoggingOut ? "Logging out..." : "Log out"}
             </Button>
           </div>
-          </ScrollArea>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

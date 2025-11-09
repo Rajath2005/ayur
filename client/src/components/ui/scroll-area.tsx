@@ -12,7 +12,16 @@ const ScrollArea = React.forwardRef<
     className={cn("relative overflow-hidden", className)}
     {...props}
   >
-    <ScrollAreaPrimitive.Viewport className="h-full w-full rounded-[inherit] [&>div]:!block">
+    <ScrollAreaPrimitive.Viewport
+      className="h-full w-full rounded-[inherit] [&>div]:!block"
+      // Ensure the viewport fills the parent's height and allows
+      // vertical scrolling. Adding `height: '100%'` helps when the
+      // inner content uses table layout (Radix adds a child with
+      // `display: table`) so the viewport's height is explicit.
+      // Keep overflow overrides so Radix computed values don't
+      // accidentally disable scrolling on desktop.
+      style={{ height: "100%", overflowY: "auto", overflowX: "hidden" }}
+    >
       {children}
     </ScrollAreaPrimitive.Viewport>
     <ScrollBar />
