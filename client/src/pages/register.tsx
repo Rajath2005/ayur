@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -24,9 +24,19 @@ type RegisterInput = z.infer<typeof registerSchema>;
 export default function Register() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { refreshUser } = useAuth();
+  const { refreshUser, user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      toast({
+        title: "Registration successful!",
+        description: "Welcome to AyurChat. Redirecting to dashboard...",
+      });
+      setLocation("/dashboard");
+    }
+  }, [user, setLocation, toast]);
 
   const form = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema),
@@ -62,6 +72,12 @@ export default function Register() {
     setGoogleLoading(true);
     try {
       await signInWithGoogle();
+      await refreshUser();
+      toast({
+        title: "Account created!",
+        description: "Welcome to AyurChat. Redirecting to dashboard...",
+      });
+      setLocation("/dashboard");
     } catch (error: any) {
       toast({
         title: "Google sign-in failed",

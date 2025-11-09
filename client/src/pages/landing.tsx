@@ -3,8 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Leaf, MessageCircle, Pill, Calendar, Sparkles, Shield, Clock } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Landing() {
+  const { user } = useAuth();
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -16,20 +19,32 @@ export default function Landing() {
           </div>
           <div className="flex items-center gap-4">
             <ThemeToggle />
-            <Link href="/login">
-              <span className="inline-block">
-                <Button variant="ghost" data-testid="button-login" asChild>
-                  <span className="cursor-pointer">Login</span>
-                </Button>
-              </span>
-            </Link>
-            <Link href="/register">
-              <span className="inline-block">
-                <Button data-testid="button-register" asChild>
-                  <span className="cursor-pointer">Get Started</span>
-                </Button>
-              </span>
-            </Link>
+            {!user ? (
+              <>
+                <Link href="/login">
+                  <span className="inline-block">
+                    <Button variant="ghost" data-testid="button-login" asChild>
+                      <span className="cursor-pointer">Login</span>
+                    </Button>
+                  </span>
+                </Link>
+                <Link href="/register">
+                  <span className="inline-block">
+                    <Button data-testid="button-register" asChild>
+                      <span className="cursor-pointer">Get Started</span>
+                    </Button>
+                  </span>
+                </Link>
+              </>
+            ) : (
+              <Link href="/dashboard">
+                <span className="inline-block">
+                  <Button data-testid="button-dashboard" asChild>
+                    <span className="cursor-pointer">Dashboard</span>
+                  </Button>
+                </span>
+              </Link>
+            )}
           </div>
         </div>
       </header>
@@ -51,25 +66,27 @@ export default function Landing() {
                   symptom checking, and holistic health practices rooted in ancient wisdom.
                 </p>
               </div>
-              <div className="flex flex-wrap gap-4">
-                <Link href="/register">
-                  <span className="inline-block">
-                    <Button size="lg" className="gap-2" data-testid="button-hero-start" asChild>
-                      <span className="cursor-pointer flex items-center gap-2">
-                        <Sparkles className="h-5 w-5" />
-                        Start Your Journey
-                      </span>
-                    </Button>
-                  </span>
-                </Link>
-                <Link href="/login">
-                  <span className="inline-block">
-                    <Button size="lg" variant="outline" data-testid="button-hero-login" asChild>
-                      <span className="cursor-pointer">Sign In</span>
-                    </Button>
-                  </span>
-                </Link>
-              </div>
+              {!user && (
+                <div className="flex flex-wrap gap-4">
+                  <Link href="/register">
+                    <span className="inline-block">
+                      <Button size="lg" className="gap-2" data-testid="button-hero-start" asChild>
+                        <span className="cursor-pointer flex items-center gap-2">
+                          <Sparkles className="h-5 w-5" />
+                          Start Your Journey
+                        </span>
+                      </Button>
+                    </span>
+                  </Link>
+                  <Link href="/login">
+                    <span className="inline-block">
+                      <Button size="lg" variant="outline" data-testid="button-hero-login" asChild>
+                        <span className="cursor-pointer">Sign In</span>
+                      </Button>
+                    </span>
+                  </Link>
+                </div>
+              )}
             </div>
 
             {/* Right Column - Visual Element */}
@@ -197,18 +214,20 @@ export default function Landing() {
                 <p className="text-muted-foreground text-lg">
                   Join thousands discovering the power of Ayurvedic wisdom combined with modern AI technology.
                 </p>
-                <div className="flex flex-wrap gap-4 justify-center">
-                  <Link href="/register">
-                    <Button size="lg" data-testid="button-cta-start">
-                      Get Started Free
-                    </Button>
-                  </Link>
-                  <Link href="/login">
-                    <Button size="lg" variant="outline" data-testid="button-cta-login">
-                      Sign In
-                    </Button>
-                  </Link>
-                </div>
+                {!user && (
+                  <div className="flex flex-wrap gap-4 justify-center">
+                    <Link href="/register">
+                      <Button size="lg" data-testid="button-cta-start">
+                        Get Started Free
+                      </Button>
+                    </Link>
+                    <Link href="/login">
+                      <Button size="lg" variant="outline" data-testid="button-cta-login">
+                        Sign In
+                      </Button>
+                    </Link>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

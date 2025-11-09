@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -23,9 +23,19 @@ type LoginInput = z.infer<typeof loginSchema>;
 export default function Login() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { refreshUser } = useAuth();
+  const { refreshUser, user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      toast({
+        title: "Login successful!",
+        description: "Redirecting to dashboard...",
+      });
+      setLocation("/dashboard");
+    }
+  }, [user, setLocation, toast]);
 
   const form = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
@@ -60,9 +70,12 @@ export default function Login() {
     setGoogleLoading(true);
     try {
       await signInWithGoogle();
-      // Note: With redirect flow, the page will redirect to Google
-      // The AuthContext will handle the result when the user returns
-      // Don't set loading to false here as the page will redirect
+      await refreshUser();
+      toast({
+        title: "Welcome back!",
+        description: "You have successfully signed in with Google.",
+      });
+      setLocation("/dashboard");
     } catch (error: any) {
       console.error("Google sign-in error:", error);
       toast({

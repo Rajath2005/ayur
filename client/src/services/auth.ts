@@ -2,7 +2,7 @@
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  signInWithRedirect,
+  signInWithPopup,
   signOut,
   onAuthStateChanged,
   sendPasswordResetEmail,
@@ -30,9 +30,9 @@ export const signIn = async (email: string, password: string): Promise<AuthUser>
 };
 
 export const signInWithGoogle = async (): Promise<void> => {
-  // Use redirect flow instead of popup to avoid COOP policy issues
-  console.log("Starting Google sign-in redirect...");
-  await signInWithRedirect(auth, googleProvider);
+  // Use popup flow for better UX and to avoid redirect issues
+  console.log("Starting Google sign-in popup...");
+  await signInWithPopup(auth, googleProvider);
 };
 
 export const logout = async (): Promise<void> => {
