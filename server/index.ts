@@ -8,28 +8,16 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// CORS middleware for development
-if (process.env.NODE_ENV !== 'production') {
-  app.use((req, res, next) => {
-    const origin = req.headers.origin;
-    
-    // Allow requests from Vite dev server
-    if (origin && (origin.includes('localhost') || origin.includes('127.0.0.1'))) {
-      res.setHeader('Access-Control-Allow-Origin', origin);
-      res.setHeader('Access-Control-Allow-Credentials', 'true');
-      res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS,PATCH');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With');
-      res.setHeader('Access-Control-Max-Age', '86400');
-    }
-    
-    // Handle preflight requests
-    if (req.method === 'OPTIONS') {
-      return res.sendStatus(204);
-    }
-    
-    next();
-  });
-}
+import cors from "cors";
+
+// CORS middleware
+app.use(
+  cors({
+    origin: ["https://ayudost-chatbot.onrender.com", "http://localhost:5173", "http://localhost:3000"],
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  })
+);
 
 // Request logging middleware
 app.use((req, res, next) => {
