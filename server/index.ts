@@ -14,8 +14,9 @@ import cors from "cors";
 app.use(
   cors({
     origin: ["https://ayudost-chatbot.onrender.com", "http://localhost:5173", "http://localhost:3000"],
-    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
   })
 );
 

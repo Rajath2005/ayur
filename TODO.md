@@ -1,12 +1,6 @@
-# TODO: Fix Google Login Redirect Issue
+# TODO: Fix Chatbot Backend Auth (401 Error)
 
-## Tasks
-- [ ] Modify `client/src/services/auth.ts`: Change signInWithGoogle to use signInWithPopup instead of signInWithRedirect to avoid redirect flow issues
-- [ ] Modify `client/src/contexts/AuthContext.tsx`: Remove getRedirectResult check as it's not needed for popup flow
-- [ ] Modify `client/src/pages/login.tsx`: Update handleGoogleSignIn to refresh user and redirect after successful popup sign-in
-- [ ] Modify `client/src/pages/register.tsx`: Update handleGoogleSignIn to refresh user and redirect after successful popup sign-in
-
-## Followup Steps
-- [ ] Test Google login popup and redirect to dashboard
-- [ ] Test Google registration popup and redirect to dashboard
-- [ ] Verify no redirect flow issues remain
+- [x] Update CORS in server/index.ts to include methods
+- [x] Update token extraction in server/middleware/verifyFirebaseToken.ts
+- [x] Restart server
+- [x] Test POST /api/conversations endpoint

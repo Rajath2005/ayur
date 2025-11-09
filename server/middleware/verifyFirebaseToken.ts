@@ -7,14 +7,15 @@ export interface AuthRequest extends Request {
 }
 
 export async function verifyFirebaseToken(req: AuthRequest, res: Response, next: NextFunction) {
-  const authHeader = req.headers.authorization || "";
-  const match = authHeader.match(/^Bearer (.+)$/);
-  if (!match) {
-    return res.status(401).json({ message: "Unauthorized - no token provided" });
+  const authHeader = req.headers.authorization || req.headers.Authorization;
+  if (typeof authHeader !== 'string' || !authHeader?.startsWith("Bearer ")) {
+    console.log("❌ Missing Bearer token");
+    return res.status(401).json({ error: "Unauthorized" });
   }
-  const idToken = match[1];
+
+  const token = authHeader.split(" ")[1];
   try {
-    const decoded = await admin.auth().verifyIdToken(idToken);
+    const decoded = await admin.auth().verifyIdToken(token);
     req.user = decoded;
     return next();
   } catch (err) {
