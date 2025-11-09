@@ -17,9 +17,8 @@ for (const envPath of envPaths) {
 const serviceAccountEnv = process.env.FIREBASE_SERVICE_ACCOUNT;
 
 if (!admin.apps.length) {
-  if (!serviceAccountEnv) {
-    console.warn("❌ FIREBASE_SERVICE_ACCOUNT environment variable is missing. Firebase Admin not initialized.");
-  } else {
+  // Prefer the single JSON env var (legacy in this repo)
+  if (serviceAccountEnv) {
     try {
       const serviceAccount = JSON.parse(serviceAccountEnv);
 
@@ -36,10 +35,34 @@ if (!admin.apps.length) {
         credential: admin.credential.cert(serviceAccount),
       });
 
-      console.log("✅ Firebase Admin initialized");
+      console.log("✅ Firebase Admin initialized from FIREBASE_SERVICE_ACCOUNT");
     } catch (error) {
       console.error("❌ Failed to parse FIREBASE_SERVICE_ACCOUNT:", error);
     }
+  } else if (
+    process.env.FIREBASE_PROJECT_ID &&
+    process.env.FIREBASE_CLIENT_EMAIL &&
+    process.env.FIREBASE_PRIVATE_KEY
+  ) {
+    // Support separate env vars (suitable for Render dashboard secrets)
+    try {
+      const privateKey = process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n");
+      const cert = {
+        projectId: process.env.FIREBASE_PROJECT_ID,
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+        privateKey,
+      } as any;
+
+      admin.initializeApp({
+        credential: admin.credential.cert(cert),
+      });
+
+      console.log("✅ Firebase Admin initialized from FIREBASE_PROJECT_ID/FIREBASE_CLIENT_EMAIL/FIREBASE_PRIVATE_KEY");
+    } catch (error) {
+      console.error("❌ Failed to initialize Firebase Admin from separate env vars:", error);
+    }
+  } else {
+    console.warn("❌ Firebase Admin not initialized. Provide FIREBASE_SERVICE_ACCOUNT JSON or FIREBASE_PROJECT_ID/CLIENT_EMAIL/PRIVATE_KEY env vars.");
   }
 }
 
