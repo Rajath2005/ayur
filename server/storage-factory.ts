@@ -1,9 +1,9 @@
-import { MemStorage } from "./storage";
+import { MemStorage, IStorage } from "./storage";
 import { DbStorage } from "./db-storage";
 import { MongoStorage } from "./mongo-storage";
 import { firebaseInitialized } from "./firebaseAdmin";
 
-export function createStorage() {
+export function createStorage(): IStorage {
   console.log("🔍 Firebase initialized:", firebaseInitialized);
 
   // Check for MongoDB URI first (new default)
@@ -32,5 +32,5 @@ export function createStorage() {
   console.log("📦 Using storage: In-Memory");
   return new MemStorage();
 }
-
-export const storage = createStorage();
+ 
+export const storage: IStorage = createStorage();

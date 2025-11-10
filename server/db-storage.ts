@@ -123,4 +123,19 @@ export class DbStorage implements IStorage {
       .where(eq(appointments.userId, userId))
       .orderBy(desc(appointments.createdAt));
   }
+
+  // Credits - placeholder implementations for PostgreSQL
+  async getUserCredits?(uid: string): Promise<number> {
+    const user = await this.getUser(uid);
+    return user?.credits ?? 40;
+  }
+
+  async deductCredits?(uid: string, amount = 1, reason = "action"): Promise<number> {
+    const user = await this.getUser(uid);
+    if (!user) return 40 - amount;
+
+    const newCredits = Math.max(0, user.credits - amount);
+    await db.update(users).set({ credits: newCredits }).where(eq(users.id, uid));
+    return newCredits;
+  }
 }

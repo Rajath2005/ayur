@@ -76,6 +76,9 @@ export class MemStorage implements IStorage {
     const user: User = { 
       ...insertUser, 
       id,
+      credits: (insertUser as any).credits ?? 40,
+      plan: (insertUser as any).plan ?? 'free',
+      lastReset: (insertUser as any).lastReset ?? null,
       createdAt: now,
     };
     this.users.set(id, user);

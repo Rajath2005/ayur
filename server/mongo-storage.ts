@@ -7,8 +7,9 @@ import {
 } from "@shared/schema";
 import { IStorage } from "./storage";
 import { connectToMongoDB } from "./mongodb";
-import { Conversation, IConversation } from "./models/Conversation";
-import { Message, IMessage } from "./models/Message";
+import { Conversation as ConversationModel, IConversation } from "./models/Conversation";
+import { Message as MessageModel, IMessage } from "./models/Message";
+import { User as UserModel } from "./models/User";
 
 export class MongoStorage implements IStorage {
   constructor() {
@@ -39,7 +40,7 @@ export class MongoStorage implements IStorage {
   // Conversations
   async getConversation(id: string): Promise<Conversation | undefined> {
     try {
-      const conversation = await Conversation.findById(id);
+      const conversation = await ConversationModel.findById(id);
       if (!conversation) return undefined;
 
       return {
@@ -57,7 +58,7 @@ export class MongoStorage implements IStorage {
 
   async getConversationsByUserId(userId: string): Promise<Conversation[]> {
     try {
-      const conversations = await Conversation.find({ userId })
+      const conversations = await ConversationModel.find({ userId })
         .sort({ updatedAt: -1 });
 
       return conversations.map(conv => ({
@@ -78,7 +79,7 @@ export class MongoStorage implements IStorage {
       const now = new Date();
       const id = conversation.id || randomUUID();
 
-      const newConversation = new Conversation({
+      const newConversation = new ConversationModel({
         _id: id,
         userId: conversation.userId,
         title: conversation.title,
@@ -106,7 +107,7 @@ export class MongoStorage implements IStorage {
       const updateData: any = { updatedAt: new Date() };
       if (updates.title !== undefined) updateData.title = updates.title;
 
-      const conversation = await Conversation.findByIdAndUpdate(
+      const conversation = await ConversationModel.findByIdAndUpdate(
         id,
         updateData,
         { new: true }
@@ -133,8 +134,8 @@ export class MongoStorage implements IStorage {
     try {
       // Delete conversation and all its messages
       await Promise.all([
-        Conversation.findByIdAndDelete(id),
-        Message.deleteMany({ conversationId: id })
+        ConversationModel.findByIdAndDelete(id),
+        MessageModel.deleteMany({ conversationId: id })
       ]);
     } catch (error) {
       console.error('MongoDB deleteConversation error:', error);
@@ -145,7 +146,7 @@ export class MongoStorage implements IStorage {
   // Messages
   async getMessagesByConversationId(conversationId: string): Promise<Message[]> {
     try {
-      const messages = await Message.find({ conversationId })
+      const messages = await MessageModel.find({ conversationId })
         .sort({ createdAt: 1 });
 
       return messages.map(msg => ({
@@ -165,7 +166,7 @@ export class MongoStorage implements IStorage {
   async createMessage(message: InsertMessage): Promise<Message> {
     try {
       // Check for duplicate messageId to ensure idempotency
-      const existingMessage = await Message.findOne({ messageId: message.id });
+  const existingMessage = await MessageModel.findOne({ messageId: message.id });
       if (existingMessage) {
         // Return existing message if duplicate
         return {
@@ -178,7 +179,7 @@ export class MongoStorage implements IStorage {
         };
       }
 
-      const newMessage = new Message({
+      const newMessage = new MessageModel({
         messageId: message.id || randomUUID(),
         conversationId: message.conversationId,
         sender: message.role,
@@ -207,7 +208,7 @@ export class MongoStorage implements IStorage {
       const updateData: any = {};
       if (updates.content !== undefined) updateData.text = updates.content;
 
-      const message = await Message.findOneAndUpdate(
+      const message = await MessageModel.findOneAndUpdate(
         { messageId: id },
         updateData,
         { new: true }
@@ -244,14 +245,56 @@ export class MongoStorage implements IStorage {
     return [];
   }
 
-  // Credits - keeping placeholder implementations
+  // Credits - implemented with MongoDB User collection
   async getUserCredits?(uid: string): Promise<number> {
-    return 40; // Default credits
+    try {
+      const user = await UserModel.findById(uid);
+      if (!user) {
+        // Create user if not exists
+        const newUser = new UserModel({
+          _id: uid,
+          username: uid, // Use UID as username for Firebase users
+          password: '', // Not used for Firebase auth
+          email: '', // Will be updated from Firebase
+          credits: 40,
+          plan: 'free',
+          createdAt: new Date(),
+        });
+        await newUser.save();
+        return 40;
+      }
+      return user.credits;
+    } catch (error) {
+      console.error('MongoDB getUserCredits error:', error);
+      return 40; // Default on error
+    }
   }
 
   async deductCredits?(uid: string, amount = 1, reason = "action"): Promise<number> {
-    // Placeholder - would need separate user collection for full implementation
-    return 40 - amount;
+    try {
+      const user = await UserModel.findById(uid);
+      if (!user) {
+        // Create user if not exists
+        const newUser = new UserModel({
+          _id: uid,
+          username: uid,
+          password: '',
+          email: '',
+          credits: 40 - amount,
+          plan: 'free',
+          createdAt: new Date(),
+        });
+        await newUser.save();
+        return 40 - amount;
+      }
+
+      const newCredits = Math.max(0, user.credits - amount);
+      await UserModel.findByIdAndUpdate(uid, { credits: newCredits });
+      return newCredits;
+    } catch (error) {
+      console.error('MongoDB deductCredits error:', error);
+      return 40 - amount; // Fallback
+    }
   }
 
   async logCreditUsage?(uid: string, deducted: number, reason = "action"): Promise<void> {

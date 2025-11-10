@@ -1,16 +1,13 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
 import {
   insertConversationSchema,
   type User
 } from "@shared/schema";
 import {
-  getChatResponse,
-  analyzeSymptoms,
-  getHerbalRemedies,
-  generateAppointmentContext
+  getChatResponse
 } from "./gemini";
+import { analyzeSymptoms, getHerbalRemedies, generateAppointmentContext } from "./ai-utils";
 import { verifyFirebaseToken, type AuthRequest } from "./middleware/verifyFirebaseToken";
 import { storage } from "./storage";
 
@@ -131,7 +128,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // MESSAGE ROUTES
-  app.get("/api/messages/:conversationId", verifyFirebaseToken, async (req: AuthRequest, res: Response) => {
+  app.get("/api/conversations/:conversationId/messages", verifyFirebaseToken, async (req: AuthRequest, res: Response) => {
     try {
       const conversation = await storage.getConversation(req.params.conversationId);
       if (!conversation) {
@@ -169,12 +166,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Forbidden" });
       }
 
-      // Check and deduct 1 credit for sending message
+      // Check credits before proceeding
       const currentCredits = await storage.getUserCredits!(userId);
+      console.log("[CREDITS BEFORE]", currentCredits);
       if (currentCredits < 1) {
         return res.status(403).json({ error: "NO_CREDITS", credits: currentCredits });
       }
-      const newCredits = await storage.deductCredits!(userId, 1, "send_message");
 
       // 1. Save user message with messageId for idempotency
       const userMessage = await storage.createMessage({
@@ -194,6 +191,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // 3. Get AI response
       const aiResponse = await getChatResponse(content, conversationHistory);
+      console.log("[AI RESPONSE]", aiResponse.content);
+
+      // Deduct credits only after successful AI response
+      const newCredits = await storage.deductCredits!(userId, 1, "send_message");
+      console.log("[CREDITS AFTER]", newCredits);
 
       // 4. Save AI message with messageId for idempotency
       const assistantMessage = await storage.createMessage({
