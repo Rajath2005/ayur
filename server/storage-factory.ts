@@ -1,24 +1,24 @@
 import { MemStorage } from "./storage";
 import { DbStorage } from "./db-storage";
-import { FirestoreStorage } from "./firestore-storage";
+import { MongoStorage } from "./mongo-storage";
 import { firebaseInitialized } from "./firebaseAdmin";
 
 export function createStorage() {
   console.log("🔍 Firebase initialized:", firebaseInitialized);
-  
-  if (firebaseInitialized) {
+
+  // Check for MongoDB URI first (new default)
+  if (process.env.MONGODB_URI || process.env.DATABASE_URL) {
     try {
-      const firestoreStorage = new FirestoreStorage();
-      console.log("📦 Using storage: Firestore");
-      return firestoreStorage;
+      const mongoStorage = new MongoStorage();
+      console.log("📦 Using storage: MongoDB Atlas");
+      return mongoStorage;
     } catch (error) {
-      console.error("❌ Firestore initialization failed, falling back:", error);
+      console.error("❌ MongoDB initialization failed, falling back:", error);
     }
-  } else {
-    console.log("⚠️ Firebase Admin not initialized, skipping Firestore");
   }
 
-  if (process.env.DATABASE_URL) {
+  // Fallback to PostgreSQL if available
+  if (process.env.DATABASE_URL && !process.env.MONGODB_URI) {
     try {
       const dbStorage = new DbStorage();
       console.log("📦 Using storage: PostgreSQL");
@@ -28,6 +28,7 @@ export function createStorage() {
     }
   }
 
+  // Final fallback to in-memory storage
   console.log("📦 Using storage: In-Memory");
   return new MemStorage();
 }

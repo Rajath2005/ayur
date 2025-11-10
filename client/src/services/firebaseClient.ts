@@ -1,7 +1,7 @@
 // client/src/services/firebaseClient.ts
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, type Auth } from "firebase/auth";
-import { getFirestore, type Firestore } from "firebase/firestore";
+// Removed Firestore imports - chat storage now uses MongoDB via API
 import { getStorage, type FirebaseStorage } from "firebase/storage";
 
 const sanitizeEnv = (value: string | boolean | number | undefined | null) => {
@@ -40,7 +40,6 @@ googleProvider.setCustomParameters({
   prompt: 'select_account'
 });
 
-export const db: Firestore = getFirestore(app);
 export const storage: FirebaseStorage = getStorage(app);
 
 export default app;

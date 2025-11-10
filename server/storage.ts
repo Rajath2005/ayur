@@ -30,6 +30,13 @@ export interface IStorage {
   // Appointments
   createAppointment(appointment: InsertAppointment): Promise<Appointment>;
   getAppointmentsByUserId(userId: string): Promise<Appointment[]>;
+
+  // Credits
+  getUserCredits?(uid: string): Promise<number>;
+  deductCredits?(uid: string, amount: number, reason: string): Promise<number>;
+  logCreditUsage?(uid: string, deducted: number, reason: string): Promise<void>;
+  resetCreditsForUser?(uid: string, newCredits?: number): Promise<void>;
+  resetCreditsForAllUsers?(newCredits?: number): Promise<void>;
 }
 
 // In-memory storage implementation

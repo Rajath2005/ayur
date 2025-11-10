@@ -3,6 +3,26 @@ import { pgTable, text, varchar, timestamp, boolean, jsonb } from "drizzle-orm/p
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Note: These schemas are kept for backward compatibility but MongoDB models are used for storage
+// Conversations collection (MongoDB)
+export interface MongoConversation {
+  id: string; // UUID
+  userId: string; // Firebase UID
+  title: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Messages collection (MongoDB)
+export interface MongoMessage {
+  id: string; // messageId - UUID, unique
+  conversationId: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  attachments: any; // Array of file URLs/metadata or null
+  createdAt: Date;
+}
+
 // Users table
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -12,16 +32,15 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-// Conversations table
+// Legacy Drizzle schemas (kept for compatibility)
 export const conversations = pgTable("conversations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   title: text("title").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  updatedAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-// Messages table
 export const messages = pgTable("messages", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   conversationId: varchar("conversation_id").notNull().references(() => conversations.id, { onDelete: "cascade" }),
@@ -87,7 +106,11 @@ export const chatMessageSchema = z.object({
 
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
-export type User = typeof users.$inferSelect;
+export type User = typeof users.$inferSelect & {
+  credits?: number;
+  plan?: "free" | "pro" | string;
+  lastReset?: string | null;
+};
 export type InsertConversation = z.infer<typeof insertConversationSchema>;
 export type Conversation = typeof conversations.$inferSelect;
 export type InsertMessage = z.infer<typeof insertMessageSchema>;

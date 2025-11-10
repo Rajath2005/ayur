@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Plus, MessageSquare, Trash2, Leaf, LogOut, Edit3 } from "lucide-react";
-import { useState } from "react";
+import { Plus, MessageSquare, Trash2, Leaf, LogOut, Edit3, ChevronDown, ChevronUp } from "lucide-react";
+import { useState, useEffect } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -21,6 +21,9 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Conversation } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCredits } from "@/hooks/useCredits";
+import { CoinBadge } from "@/components/coin-badge";
+import { CreditUsageBar } from "@/components/credit-usage-bar";
 
 export function AppSidebar() {
   const [location, setLocation] = useLocation();
@@ -28,9 +31,21 @@ export function AppSidebar() {
   const { logout, user } = useAuth();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
+  const [showCreditsBar, setShowCreditsBar] = useState(false);
+  const { credits, maxCredits, refreshCredits } = useCredits();
 
   const { data: conversations = [], isLoading } = useQuery<Conversation[]>({
-    queryKey: ["/api/conversations"],
+    queryKey: ["conversations"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/conversations");
+      if (!response.ok) throw new Error("Failed to fetch conversations");
+      return response.json();
+    },
+    enabled: !!user?.id,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    staleTime: 0 // Always fetch fresh data
   });
 
   const createConversationMutation = useMutation<Conversation, Error, void>({
@@ -42,6 +57,7 @@ export function AppSidebar() {
     },
     onSuccess: (newConversation: Conversation) => {
       queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
+      refreshCredits(); // Refresh credits after creating conversation
       setLocation(`/chat/${newConversation.id}`);
     },
     onError: () => {
@@ -153,6 +169,8 @@ export function AppSidebar() {
     setEditTitle("");
   };
 
+
+
   return (
     <Sidebar>
       <SidebarHeader className="p-4 border-b">
@@ -160,8 +178,19 @@ export function AppSidebar() {
           <div className="flex items-center gap-2 hover-elevate rounded-lg p-2 -m-2 transition-all">
             <Leaf className="h-6 w-6 text-primary" />
             <span className="text-lg font-semibold">AyurChat</span>
+            <CoinBadge
+              credits={credits}
+              maxCredits={maxCredits}
+              onClick={() => setShowCreditsBar(!showCreditsBar)}
+              className="ml-auto"
+            />
           </div>
         </Link>
+        {showCreditsBar && (
+          <div className="mt-3 px-2">
+            <CreditUsageBar credits={credits} maxCredits={maxCredits} />
+          </div>
+        )}
       </SidebarHeader>
 
       <SidebarContent>
@@ -189,12 +218,20 @@ export function AppSidebar() {
             <ScrollArea className="h-full px-2">
               <SidebarMenu className="space-y-1">
                 {isLoading ? (
+                  <div className="px-4 py-8 text-center text-sm text-muted-foreground animate-pulse">
+                    <div className="inline-flex items-center gap-2">
+                      <div className="h-4 w-4 rounded-full bg-muted"></div>
+                      Loading conversations...
+                    </div>
+                  </div>
+                ) : !user ? (
                   <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-                    Loading...
+                    Sign in to see your conversations
                   </div>
                 ) : conversations.length === 0 ? (
                   <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-                    No conversations yet
+                    <p>No conversations yet</p>
+                    <p className="mt-2 text-xs">Click "New Chat" to get started</p>
                   </div>
                 ) : (
                   conversations.map((conversation) => {

@@ -1,17 +1,18 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { 
+import {
   insertConversationSchema,
-  type User 
+  type User
 } from "@shared/schema";
-import { 
-  getChatResponse, 
-  analyzeSymptoms, 
+import {
+  getChatResponse,
+  analyzeSymptoms,
   getHerbalRemedies,
-  generateAppointmentContext 
+  generateAppointmentContext
 } from "./gemini";
 import { verifyFirebaseToken, type AuthRequest } from "./middleware/verifyFirebaseToken";
+import { storage } from "./storage";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // AUTH ROUTES
@@ -63,12 +64,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!req.body.title) {
         return res.status(400).json({ message: "Title is required" });
       }
+
+      // Check and deduct 2 credits for creating conversation
+      const currentCredits = await storage.getUserCredits!(userId);
+      if (currentCredits < 2) {
+        return res.status(403).json({ error: "NO_CREDITS", credits: currentCredits });
+      }
+      const newCredits = await storage.deductCredits!(userId, 2, "create_conversation");
+
       const data = {
         userId,
         title: req.body.title,
       };
       const conversation = await storage.createConversation(data);
-      res.json(conversation);
+      res.json({ ...conversation, credits: newCredits });
     } catch (error: any) {
       console.error("Create conversation error:", error);
       console.error("Error stack:", error.stack);
@@ -146,7 +155,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/chat", verifyFirebaseToken, async (req: AuthRequest, res: Response) => {
     try {
       const userId = req.user!.uid;
-      const { conversationId, content } = req.body;
+      const { conversationId, content, userMessageId, assistantMessageId } = req.body;
 
       if (!conversationId || !content) {
         return res.status(400).json({ message: "conversationId and content are required" });
@@ -160,8 +169,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Forbidden" });
       }
 
-      // 1. Save user message
+      // Check and deduct 1 credit for sending message
+      const currentCredits = await storage.getUserCredits!(userId);
+      if (currentCredits < 1) {
+        return res.status(403).json({ error: "NO_CREDITS", credits: currentCredits });
+      }
+      const newCredits = await storage.deductCredits!(userId, 1, "send_message");
+
+      // 1. Save user message with messageId for idempotency
       const userMessage = await storage.createMessage({
+        id: userMessageId,
         conversationId,
         role: "user",
         content,
@@ -178,8 +195,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // 3. Get AI response
       const aiResponse = await getChatResponse(content, conversationHistory);
 
-      // 4. Save AI message
+      // 4. Save AI message with messageId for idempotency
       const assistantMessage = await storage.createMessage({
+        id: assistantMessageId,
         conversationId,
         role: "assistant",
         content: aiResponse.content,
@@ -194,7 +212,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await storage.updateConversation(conversationId, { updatedAt: new Date() });
       }
 
-      res.json({ userMessage, assistantMessage });
+      res.json({ userMessage, assistantMessage, credits: newCredits });
     } catch (error: any) {
       console.error("Chat error:", error);
       res.status(500).json({ message: error.message || "Failed to send message" });
@@ -279,13 +297,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         appointmentLink: `https://calendly.com/ayurchat-practitioner?prefill=${encodeURIComponent(context)}`,
       });
 
-      res.json({ 
+      res.json({
         appointmentLink: appointment.appointmentLink,
-        message: "Appointment link generated successfully" 
+        message: "Appointment link generated successfully"
       });
     } catch (error: any) {
       console.error("Appointment link error:", error);
       res.status(500).json({ message: error.message || "Failed to generate appointment link" });
+    }
+  });
+
+  // GET USER CREDITS
+  app.get("/api/users/me/credits", verifyFirebaseToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = req.user!.uid;
+      const credits = await storage.getUserCredits!(userId);
+      res.json({ credits, maxCredits: 40 });
+    } catch (error: any) {
+      console.error("Get credits error:", error);
+      res.status(500).json({ message: error.message || "Failed to get credits" });
     }
   });
 

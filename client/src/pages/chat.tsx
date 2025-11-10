@@ -13,10 +13,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { UserDashboard } from "@/components/user-dashboard";
 import { useAuth } from "@/contexts/AuthContext";
 import { queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast"; 
-import { getMessages, getConversation } from "@/services/firestore";
+import { useToast } from "@/hooks/use-toast";
+
 import { apiRequest } from "@/lib/queryClient";
 import type { Message, Conversation } from "@shared/schema";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useCredits } from "@/hooks/useCredits";
 
 export default function ChatPage() {
   const [, params] = useRoute("/chat/:id");
@@ -26,8 +28,10 @@ export default function ChatPage() {
   const [isUserDashboardOpen, setIsUserDashboardOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [outOfCreditsModalOpen, setOutOfCreditsModalOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const { credits, refreshCredits } = useCredits();
 
   const quickSuggestions = [
     "What's my dosha type?",
@@ -40,35 +44,59 @@ export default function ChatPage() {
   const { data: conversation } = useQuery<Conversation | null>({
     queryKey: ["conversations", conversationId],
     queryFn: async () => {
-      const conv = await getConversation(conversationId);
-      if (!conv) return null;
-      return conv;
+      const res = await apiRequest(`GET`, `/api/conversations/${conversationId}`);
+      if (!res.ok) return null;
+      return res.json();
     },
     enabled: !!conversationId,
   });
 
   const { data: messages = [], isLoading } = useQuery<Message[]>({
     queryKey: ["messages", conversationId],
-    queryFn: () => getMessages(conversationId),
+    queryFn: async () => {
+      const res = await apiRequest(`GET`, `/api/conversations/${conversationId}/messages`);
+      if (!res.ok) return [];
+      return res.json();
+    },
     enabled: !!conversationId,
     staleTime: 0, // Always fetch fresh data
   });
 
   const sendMessageMutation = useMutation({
-    mutationFn: async ({ content }: { content: string }) => {
-      const res = await apiRequest("POST", "/api/chat", { conversationId, content });
+    mutationFn: async (content: string) => {
+      // Generate unique IDs for messages
+      const userMessageId = `user-${Date.now()}`;
+      const assistantMessageId = `assistant-${Date.now()}`;
+
+      // Send to API for processing (API now handles conversation creation and message storage)
+      const res = await apiRequest("POST", "/api/chat", {
+        conversationId,
+        content,
+        userMessageId,
+        assistantMessageId
+      });
+
       if (!res.ok) {
-        throw new Error("Failed to send message");
+        const error = await res.json();
+        if (error.error === "NO_CREDITS") {
+          setOutOfCreditsModalOpen(true);
+        }
+        throw new Error(error.message || "Failed to send message");
       }
-      return res.json();
+
+      // Return IDs for tracking
+      return { userMessageId, assistantMessageId };
     },
-    onMutate: async ({ content }: { content: string }) => {
+    onMutate: async (content: string) => {
+      // Cancel outgoing fetches
       await queryClient.cancelQueries({ queryKey: ["messages", conversationId] });
 
-      const previousMessages = queryClient.getQueryData<Message[]>(["messages", conversationId]) || [];
+      // Create optimistic messages
+      const userMessageId = `user-${Date.now()}`;
+      const assistantMessageId = `assistant-${Date.now()}`;
 
       const userMessage: Message = {
-        id: `user-${Date.now()}`,
+        id: userMessageId,
         conversationId,
         role: "user",
         content,
@@ -94,34 +122,49 @@ export default function ChatPage() {
       setMessage("");
       setIsTyping(true);
 
-      return { previousMessages };
+      const previousMessages = queryClient.getQueryData<Message[]>(["messages", conversationId]) || [];
+      return { previousMessages, userMessageId, assistantMessageId };
     },
-    onSuccess: (data) => {
-      // Optimistically update with the real messages returned from the API
-      queryClient.setQueryData<Message[]>(["messages", conversationId], (old) => {
-        if (!old) return [data.userMessage, data.assistantMessage];
-        // Replace the temporary messages with the real ones from the server
-        const newMessages = old.slice(0, -2);
-        return [...newMessages, data.userMessage, data.assistantMessage];
-      });
-
-      // Invalidate to ensure consistency and update conversation list
-      queryClient.invalidateQueries({ queryKey: ["messages", conversationId], exact: true });
-      queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
+    onSuccess: async ({ userMessageId, assistantMessageId }) => {
+      // Invalidate queries to get fresh data from server
+      queryClient.invalidateQueries({ queryKey: ["messages", conversationId] });
+      queryClient.invalidateQueries({ queryKey: ["conversations"] });
       setIsTyping(false);
+
+      // Refresh credits after successful message send
+      refreshCredits();
+
+      // Start listening for message updates
+      const checkMessageInterval = setInterval(async () => {
+        const res = await apiRequest(`GET`, `/api/conversations/${conversationId}/messages`);
+        if (res.ok) {
+          const messages = await res.json();
+          const assistantMessage = messages.find((m: Message) => m.id === assistantMessageId);
+          if (assistantMessage?.content) {
+            clearInterval(checkMessageInterval);
+            queryClient.invalidateQueries({ queryKey: ["messages", conversationId] });
+          }
+        }
+      }, 1000);
+
+      // Clear interval after 30 seconds (timeout)
+      setTimeout(() => clearInterval(checkMessageInterval), 30000);
 
       // Auto-scroll to the new message
       if (scrollRef.current) {
         scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
       }
     },
-    onError: () => {
+    onError: (error: Error) => {
       setIsTyping(false);
       toast({
         title: "Error",
-        description: "Could not send message",
+        description: error.message || "Could not send message",
         variant: "destructive",
       });
+      
+      // Roll back optimistic update
+      queryClient.invalidateQueries({ queryKey: ["messages", conversationId] });
     },
   });
 
@@ -131,7 +174,7 @@ export default function ChatPage() {
   };
 
   const regenerateMessage = (messageContent: string) => {
-    sendMessageMutation.mutate({ content: messageContent });
+    sendMessageMutation.mutate(messageContent);
   };
 
   const exportConversation = () => {
@@ -153,6 +196,8 @@ export default function ChatPage() {
     }
   }, [messages, isTyping]);
 
+
+
   useEffect(() => {
     // Auto-resize textarea
     if (textareaRef.current) {
@@ -163,7 +208,16 @@ export default function ChatPage() {
 
   const handleSend = () => {
     if (!message.trim() || sendMessageMutation.isPending) return;
-    sendMessageMutation.mutate({ content: message });
+    if ((credits ?? 0) <= 0) {
+      setOutOfCreditsModalOpen(true);
+      toast({
+        title: "Out of credits",
+        description: "You have no credits left.",
+        variant: "destructive",
+      });
+      return;
+    }
+    sendMessageMutation.mutate(message.trim());
   };
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -337,7 +391,7 @@ export default function ChatPage() {
                 </div>
                 <Button
                   onClick={handleSend}
-                  disabled={!message.trim() || sendMessageMutation.isPending}
+                  disabled={!message.trim() || sendMessageMutation.isPending || (credits ?? 0) <= 0}
                   size="icon"
                   className="h-11 w-11 rounded-full"
                   data-testid="button-send"
@@ -353,6 +407,18 @@ export default function ChatPage() {
           </div>
         </div>
       </div>
+
+      {/* Out of Credits Modal */}
+      <Dialog open={outOfCreditsModalOpen} onOpenChange={setOutOfCreditsModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Out of Credits</DialogTitle>
+            <DialogDescription>
+              You have run out of credits. Please contact support to get more credits or wait for your monthly reset.
+            </DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
     </SidebarProvider>
   );
 }
