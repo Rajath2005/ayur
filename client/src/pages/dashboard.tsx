@@ -69,6 +69,26 @@ export default function Dashboard() {
     },
   });
 
+  const createImageChatSessionMutation = useMutation<Conversation, Error, void>({
+    mutationFn: async () => {
+      const result = await apiRequest("POST", "/api/image-chat-sessions", {
+        title: "Image Analysis Session",
+      });
+      return result.json();
+    },
+    onSuccess: (newSession: Conversation) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
+      setLocation(`/image-chat/${newSession.id}`);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Could not create image chat session",
+        variant: "destructive",
+      });
+    },
+  });
+
   const latestConversation = conversations[0];
   const totalImages = 0;
   const lastActiveDate = latestConversation ? new Date(latestConversation.createdAt).toLocaleDateString() : "Never";
@@ -183,12 +203,12 @@ export default function Dashboard() {
                         <MessageSquare className="h-5 w-5" />
                         Start Chat
                       </Button>
-                      <Button 
-                        size="lg" 
-                        variant="outline" 
+                      <Button
+                        size="lg"
+                        variant="outline"
                         className="flex-1 gap-2 h-12"
-                        onClick={() => createConversationMutation.mutate()}
-                        disabled={createConversationMutation.isPending}
+                        onClick={() => createImageChatSessionMutation.mutate()}
+                        disabled={createImageChatSessionMutation.isPending}
                       >
                         <Camera className="h-5 w-5" />
                         Upload Image

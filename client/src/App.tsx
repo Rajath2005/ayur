@@ -11,6 +11,7 @@ import Login from "@/pages/login";
 import Register from "@/pages/register";
 import Dashboard from "@/pages/dashboard";
 import ChatPage from "@/pages/chat";
+import ImageChatPage from "@/pages/ImageChat";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -27,6 +28,11 @@ function Router() {
       <Route path="/chat/:id">
         <ProtectedRoute>
           <ChatPage />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/image-chat/:id">
+        <ProtectedRoute>
+          <ImageChatPage />
         </ProtectedRoute>
       </Route>
       <Route component={NotFound} />
