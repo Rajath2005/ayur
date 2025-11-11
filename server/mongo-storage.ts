@@ -251,19 +251,40 @@ export class MongoStorage implements IStorage {
       const user = await UserModel.findById(uid);
       if (!user) {
         // Create user if not exists
+        const now = new Date();
+        const cycleEnd = new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000); // 15 days
         const newUser = new UserModel({
           _id: uid,
           username: uid, // Use UID as username for Firebase users
           password: '', // Not used for Firebase auth
           email: '', // Will be updated from Firebase
-          credits: 40,
+          totalCredits: 40,
+          usedCredits: 0,
+          remainingCredits: 40,
+          cycleStart: now,
+          cycleEnd: cycleEnd,
           plan: 'free',
-          createdAt: new Date(),
+          createdAt: now,
         });
         await newUser.save();
         return 40;
       }
-      return user.credits;
+
+      // Check if cycle has expired and reset if needed
+      const now = new Date();
+      if (now > user.cycleEnd) {
+        const newCycleEnd = new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000); // 15 days
+        await UserModel.findByIdAndUpdate(uid, {
+          totalCredits: 40,
+          usedCredits: 0,
+          remainingCredits: 40,
+          cycleStart: now,
+          cycleEnd: newCycleEnd,
+        });
+        return 40;
+      }
+
+      return user.remainingCredits;
     } catch (error) {
       console.error('MongoDB getUserCredits error:', error);
       return 40; // Default on error
@@ -275,22 +296,47 @@ export class MongoStorage implements IStorage {
       const user = await UserModel.findById(uid);
       if (!user) {
         // Create user if not exists
+        const now = new Date();
+        const cycleEnd = new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000); // 15 days
         const newUser = new UserModel({
           _id: uid,
           username: uid,
           password: '',
           email: '',
-          credits: 40 - amount,
+          totalCredits: 40 - amount,
+          usedCredits: amount,
+          remainingCredits: 40 - amount,
+          cycleStart: now,
+          cycleEnd: cycleEnd,
           plan: 'free',
-          createdAt: new Date(),
+          createdAt: now,
         });
         await newUser.save();
         return 40 - amount;
       }
 
-      const newCredits = Math.max(0, user.credits - amount);
-      await UserModel.findByIdAndUpdate(uid, { credits: newCredits });
-      return newCredits;
+      // Check if cycle has expired and reset if needed
+      const now = new Date();
+      if (now > user.cycleEnd) {
+        const newCycleEnd = new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000); // 15 days
+        const newTotalCredits = 40 - amount;
+        await UserModel.findByIdAndUpdate(uid, {
+          totalCredits: 40,
+          usedCredits: amount,
+          remainingCredits: newTotalCredits,
+          cycleStart: now,
+          cycleEnd: newCycleEnd,
+        });
+        return newTotalCredits;
+      }
+
+      const newRemainingCredits = Math.max(0, user.remainingCredits - amount);
+      const newUsedCredits = user.usedCredits + amount;
+      await UserModel.findByIdAndUpdate(uid, {
+        usedCredits: newUsedCredits,
+        remainingCredits: newRemainingCredits
+      });
+      return newRemainingCredits;
     } catch (error) {
       console.error('MongoDB deductCredits error:', error);
       return 40 - amount; // Fallback

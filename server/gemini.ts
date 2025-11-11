@@ -1,25 +1,52 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenerativeAI, GenerativeModel } from "@google/generative-ai";
 import * as dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
+import { existsSync } from "fs";
 
+// Recreate __dirname for ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// ✅ Load environment variables from /server/.env
-dotenv.config({ path: path.resolve(__dirname, "../server/.env") });
+// Try multiple .env locations
+const envPaths = [
+  path.resolve(__dirname, ".env"),
+  path.resolve(__dirname, "../.env"),
+  path.resolve(process.cwd(), "server/.env"),
+  path.resolve(process.cwd(), ".env"),
+];
+
+console.log("🔍 Checking .env file locations:");
+for (const envPath of envPaths) {
+  console.log(`  - ${envPath}: ${existsSync(envPath) ? "✅ Found" : "❌ Not found"}`);
+  if (existsSync(envPath)) {
+    dotenv.config({ path: envPath, override: false });
+  }
+}
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
+console.log("\n📋 Environment Variables Check:");
+console.log(`  - GEMINI_API_KEY: ${GEMINI_API_KEY ? `✅ Present (${GEMINI_API_KEY.substring(0, 8)}...)` : "❌ Missing"}`);
+console.log(`  - NODE_ENV: ${process.env.NODE_ENV || "development"}`);
+
 if (!GEMINI_API_KEY) {
-  console.error("❌ ERROR: GEMINI_API_KEY is missing in /server/.env");
-  process.exit(1); // Exit if API key is missing
+  console.error("\n❌ ERROR: GEMINI_API_KEY is missing!");
+  throw new Error("GEMINI_API_KEY is required");
 }
 
-// Log key presence (but not the actual key)
-console.log("✅ Gemini API Key loaded:", GEMINI_API_KEY ? "Present" : "Missing");
+const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY!);
+// Try these models in order until one works
+const MODEL_FALLBACKS = [
+  "gemini-2.5-flash",
+  "gemini-2.5-pro",
+  "gemini-2.0-flash",
+  "gemini-flash-latest",
+  "gemini-pro-latest"
+];
+
+let workingModel: string | null = null;
 
 export interface ChatResponse {
   content: string;
@@ -27,59 +54,98 @@ export interface ChatResponse {
   requiresProfessional?: boolean;
 }
 
+async function getWorkingModel(): Promise<string> {
+  if (workingModel) {
+    return workingModel;
+  }
+
+  console.log("🔍 Finding compatible Gemini model...");
+  
+  for (const modelName of MODEL_FALLBACKS) {
+    try {
+      console.log(`   Testing: ${modelName}...`);
+      const model = genAI.getGenerativeModel({ model: modelName });
+      
+      // Try a simple request to verify it works
+      const result = await model.generateContent("Hi");
+      if (result?.response?.text()) {
+        workingModel = modelName;
+        console.log(`   ✅ Found working model: ${modelName}`);
+        return modelName;
+      }
+    } catch (err: any) {
+      console.log(`   ❌ ${modelName} failed: ${err.message}`);
+      continue;
+    }
+  }
+
+  throw new Error("No compatible Gemini model found. Please check your API key.");
+}
+
 async function generate(prompt: string): Promise<string> {
   try {
-    // Initialize model with safety settings
-    console.log("🔄 Initializing Gemini model...");
-    const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
-      // Using default safety settings
+    console.log("\n🔄 Initializing Gemini model...");
+    
+    // Get a working model
+    const modelName = await getWorkingModel();
+    
+    const model: GenerativeModel = genAI.getGenerativeModel({
+      model: modelName,
+      generationConfig: {
+        temperature: 0.7,
+        topK: 40,
+        topP: 0.95,
+        maxOutputTokens: 1024,
+      },
     });
 
-    // Validate if model is initialized
-    if (!model) {
-      throw new Error("Failed to initialize Gemini model");
-    }
-    console.log("✅ Gemini model initialized successfully");
+    console.log(`✅ Using model: ${modelName}`);
+    console.log(`📝 Prompt length: ${prompt.length} characters`);
 
-    // Generate content with retry mechanism
-    let attempts = 0;
-    const maxAttempts = 3;
+    console.log("🚀 Sending request to Gemini API...");
+    const result = await model.generateContent(prompt);
     
-    while (attempts < maxAttempts) {
-      try {
-        const result = await model.generateContent(prompt);
-        
-        // Check if we have a valid response
-        if (!result?.response) {
-          throw new Error("Empty response from Gemini");
-        }
+    console.log("📥 Received response from Gemini API");
 
-        const text = await result.response.text();
-        
-        if (!text || text.trim().length === 0) {
-          throw new Error("Empty text response");
-        }
-
-        console.log("✅ Gemini Response:", text.slice(0, 80));
-        return text;
-      } catch (retryError) {
-        attempts++;
-        if (attempts === maxAttempts) {
-          throw retryError;
-        }
-        // Wait before retry (exponential backoff)
-        await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempts) * 1000));
-      }
+    if (!result?.response) {
+      throw new Error("Empty response from Gemini API");
     }
+
+    const text = result.response.text();
     
-    throw new Error("Max retry attempts reached");
+    if (!text || text.trim().length === 0) {
+      throw new Error("Empty text response from Gemini");
+    }
+
+    console.log(`✅ Response received (${text.length} characters)`);
+    console.log(`📄 Preview: ${text.slice(0, 100)}...`);
+    
+    return text;
+
   } catch (err: any) {
-    console.error("❌ Gemini ERROR →", err?.message || err, "\nStack:", err?.stack);
-    if (err?.message?.includes("API key")) {
-      return "Configuration error: Invalid or missing API key. Please check server configuration.";
+    console.error("\n❌ GEMINI API ERROR:");
+    console.error("  Message:", err?.message || "Unknown error");
+    console.error("  Type:", err?.constructor?.name);
+    
+    if (err?.status) {
+      console.error("  Status:", err.status);
     }
-    return "I'm experiencing technical difficulties. Please try again in a moment.";
+    if (err?.statusText) {
+      console.error("  Status Text:", err.statusText);
+    }
+
+    // Return user-friendly error messages
+    if (err?.message?.includes("API key")) {
+      return "⚠️ Configuration error: Invalid API key. Please check your Gemini API key.";
+    }
+    if (err?.message?.includes("quota") || err?.message?.includes("limit")) {
+      return "⚠️ API quota exceeded. Please try again later.";
+    }
+    if (err?.message?.includes("blocked") || err?.message?.includes("safety")) {
+      return "⚠️ Response blocked by safety filters. Please rephrase your question.";
+    }
+    
+    return "⚠️ I'm experiencing technical difficulties. Please try again in a moment.";
   }
 }
 
@@ -87,18 +153,29 @@ export async function getChatResponse(
   userMessage: string,
   conversationHistory: Array<{ role: string; content: string }> = []
 ): Promise<ChatResponse> {
-  const prompt = `
-You are AyurChat, an Ayurvedic wellness & lifestyle assistant.
-Provide safe, general guidance. Avoid medical diagnosis.
+  console.log("\n💬 Processing chat request:");
+  console.log(`  User message: ${userMessage.substring(0, 50)}...`);
+  console.log(`  History length: ${conversationHistory.length} messages`);
 
-Conversation so far:
-${conversationHistory.map((m) => `${m.role}: ${m.content}`).join("\n")}
+  // Build conversation context
+  const historyContext = conversationHistory
+    .slice(-5) // Only include last 5 messages
+    .map((m) => `${m.role === "user" ? "User" : "Assistant"}: ${m.content}`)
+    .join("\n\n");
 
+  const prompt = `You are AyurChat, an Ayurvedic wellness & lifestyle assistant.
+You provide safe, general guidance based on Ayurvedic principles.
+You never provide medical diagnosis or replace professional medical advice.
+
+${historyContext ? `Previous conversation:\n${historyContext}\n\n` : ""}Current question:
 User: ${userMessage}
-AI:
-`;
+
+Please provide a helpful, compassionate response based on Ayurvedic wellness principles:`;
 
   const response = await generate(prompt);
 
-  return { content: response };
+  return { 
+    content: response,
+    
+  };
 }

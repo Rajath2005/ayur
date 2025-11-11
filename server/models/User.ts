@@ -5,9 +5,12 @@ export interface IUser extends Document {
   username: string;
   password: string;
   email: string;
-  credits: number;
+  totalCredits: number;
+  usedCredits: number;
+  remainingCredits: number;
+  cycleStart: Date;
+  cycleEnd: Date;
   plan: 'free' | 'pro' | string;
-  lastReset?: Date;
   createdAt: Date;
 }
 
@@ -16,9 +19,12 @@ const UserSchema = new Schema<IUser>({
   username: { type: String, required: true, unique: true },
   password: { type: String, default: '' }, // Not required for Firebase users
   email: { type: String, default: '' }, // Not required for Firebase users
-  credits: { type: Number, required: true, default: 40 },
+  totalCredits: { type: Number, required: true, default: 40 },
+  usedCredits: { type: Number, required: true, default: 0 },
+  remainingCredits: { type: Number, required: true, default: 40 },
+  cycleStart: { type: Date, required: true, default: Date.now },
+  cycleEnd: { type: Date, required: true, default: () => new Date(Date.now() + 15 * 24 * 60 * 60 * 1000) },
   plan: { type: String, required: true, default: 'free' },
-  lastReset: { type: Date },
   createdAt: { type: Date, default: Date.now },
 }, {
   timestamps: false, // We handle createdAt manually

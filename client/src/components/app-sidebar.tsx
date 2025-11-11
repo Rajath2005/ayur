@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Plus, MessageSquare, Trash2, Leaf, LogOut, Edit3, ChevronDown, ChevronUp } from "lucide-react";
-import { useState, useEffect } from "react";
+import { Plus, MessageSquare, Trash2, Leaf, LogOut, Edit3 } from "lucide-react";
+import { useState } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -15,15 +15,15 @@ import {
   SidebarFooter,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Conversation } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCredits } from "@/hooks/useCredits";
-import { CoinBadge } from "@/components/coin-badge";
-import { CreditUsageBar } from "@/components/credit-usage-bar";
+import CreditsButton from "@/components/CreditsButton";
+
 
 export function AppSidebar() {
   const [location, setLocation] = useLocation();
@@ -31,7 +31,7 @@ export function AppSidebar() {
   const { logout, user } = useAuth();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
-  const [showCreditsBar, setShowCreditsBar] = useState(false);
+
   const { credits, maxCredits, refreshCredits } = useCredits();
 
   const { data: conversations = [], isLoading } = useQuery<Conversation[]>({
@@ -169,28 +169,19 @@ export function AppSidebar() {
     setEditTitle("");
   };
 
-
-
   return (
-    <Sidebar>
-      <SidebarHeader className="p-4 border-b">
+    <Sidebar className="relative z-40">
+      <SidebarHeader className="p-3 sm:p-4 border-b">
         <Link href="/dashboard">
           <div className="flex items-center gap-2 hover-elevate rounded-lg p-2 -m-2 transition-all">
-            <Leaf className="h-6 w-6 text-primary" />
-            <span className="text-lg font-semibold">AyurChat</span>
-            <CoinBadge
+            <Leaf className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+            <span className="text-base sm:text-lg font-semibold">AyurChat</span>
+            <CreditsButton
               credits={credits}
               maxCredits={maxCredits}
-              onClick={() => setShowCreditsBar(!showCreditsBar)}
-              className="ml-auto"
             />
           </div>
         </Link>
-        {showCreditsBar && (
-          <div className="mt-3 px-2">
-            <CreditUsageBar credits={credits} maxCredits={maxCredits} />
-          </div>
-        )}
       </SidebarHeader>
 
       <SidebarContent>
@@ -207,8 +198,6 @@ export function AppSidebar() {
             </Button>
           </div>
         </SidebarGroup>
-
-
 
         <SidebarGroup className="flex-1">
           <SidebarGroupLabel className="px-4 text-xs font-medium text-muted-foreground uppercase tracking-wide">
