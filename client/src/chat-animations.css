@@ -1,0 +1,198 @@
+/* Chat-specific animations */
+
+/* Message entrance animations */
+@keyframes slide-in-left {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes slide-in-right {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes fade-in {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+/* Typing indicator pulsing dots */
+@keyframes pulse-dot {
+
+    0%,
+    100% {
+        opacity: 0.3;
+        transform: scale(0.8);
+    }
+
+    50% {
+        opacity: 1;
+        transform: scale(1.2);
+    }
+}
+
+/* Credit deduction spark effect */
+@keyframes spark {
+    0% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+
+    50% {
+        opacity: 0.8;
+        transform: scale(1.2) translateY(-10px);
+    }
+
+    100% {
+        opacity: 0;
+        transform: scale(0.5) translateY(-20px);
+    }
+}
+
+/* Reaction pop animation */
+@keyframes reaction-pop {
+    0% {
+        opacity: 0;
+        transform: scale(0);
+    }
+
+    50% {
+        transform: scale(1.1);
+    }
+
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Scroll button bounce */
+@keyframes bounce-subtle {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-4px);
+    }
+}
+
+/* Apply animations */
+.animate-slide-in-left {
+    animation: slide-in-left 0.4s ease-out;
+}
+
+.animate-slide-in-right {
+    animation: slide-in-right 0.4s ease-out;
+}
+
+.animate-fade-in {
+    animation: fade-in 0.3s ease-out;
+}
+
+.animate-pulse-dot {
+    animation: pulse-dot 1.4s ease-in-out infinite;
+}
+
+.animate-spark {
+    animation: spark 0.6s ease-out forwards;
+}
+
+.animate-reaction-pop {
+    animation: reaction-pop 0.3s ease-out;
+}
+
+.animate-bounce-subtle {
+    animation: bounce-subtle 2s ease-in-out infinite;
+}
+
+/* Message bubble hover effects */
+.message-bubble-hover {
+    transition: all 0.2s ease;
+}
+
+.message-bubble-hover:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+/* Glassmorphism for sidebar */
+.glass-blur {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    background-color: rgba(255, 255, 255, 0.7);
+}
+
+.dark .glass-blur {
+    background-color: rgba(0, 0, 0, 0.4);
+}
+
+/* Smooth scroll behavior */
+.smooth-scroll {
+    scroll-behavior: smooth;
+}
+
+/* Placeholder animation */
+@keyframes placeholder-pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.placeholder-animate::placeholder {
+    animation: placeholder-pulse 2s ease-in-out infinite;
+}
+
+/* Mobile-specific optimizations */
+@media (max-width: 768px) {
+
+    .animate-slide-in-left,
+    .animate-slide-in-right {
+        animation-duration: 0.3s;
+    }
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+
+    .animate-slide-in-left,
+    .animate-slide-in-right,
+    .animate-fade-in,
+    .animate-pulse-dot,
+    .animate-spark,
+    .animate-reaction-pop,
+    .animate-bounce-subtle {
+        animation: none;
+    }
+
+    .message-bubble-hover:hover {
+        transform: none;
+    }
+}
