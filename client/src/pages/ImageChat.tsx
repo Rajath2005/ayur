@@ -91,7 +91,9 @@ export default function ImageChatPage() {
         throw new Error(error.message || "Failed to send message");
       }
 
-      return { userMessageId, assistantMessageId };
+      const result = await res.json();
+      // Return IDs and credits for tracking
+      return { userMessageId, assistantMessageId, credits: result.credits };
     },
     onMutate: async (content: string) => {
       const userMessageId = `user-${Date.now()}`;
@@ -128,17 +130,24 @@ export default function ImageChatPage() {
 
       return { userMessageId, assistantMessageId };
     },
-    onSuccess: async ({ userMessageId, assistantMessageId }) => {
+    onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ["imageMessages", conversationId] });
       queryClient.invalidateQueries({ queryKey: ["imageChatSessions"] });
       setIsTyping(false);
-      refreshCredits();
+
+      // Update credits in cache immediately with the returned value
+      if (data.credits !== undefined) {
+        queryClient.setQueryData(["user", "credits", user?.id], (old: any) => ({
+          ...old,
+          remainingCredits: data.credits,
+        }));
+      }
 
       const checkMessageInterval = setInterval(async () => {
         const res = await apiRequest(`GET`, `/api/image-chat-sessions/${conversationId}/messages`);
         if (res.ok) {
           const messages = await res.json();
-          const assistantMessage = messages.find((m: Message) => m.id === assistantMessageId);
+          const assistantMessage = messages.find((m: Message) => m.id === data.assistantMessageId);
           if (assistantMessage?.content) {
             clearInterval(checkMessageInterval);
             queryClient.invalidateQueries({ queryKey: ["imageMessages", conversationId] });

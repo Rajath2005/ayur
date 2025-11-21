@@ -22,7 +22,7 @@ import type { Conversation } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCredits } from "@/hooks/useCredits";
-import CreditsButton from "@/components/CreditsButton";
+import { CreditsDisplay } from "@/components/credits-display";
 
 
 export function AppSidebar() {
@@ -48,39 +48,68 @@ export function AppSidebar() {
     staleTime: 0 // Always fetch fresh data
   });
 
-  const createConversationMutation = useMutation<Conversation, Error, void>({
+  const createConversationMutation = useMutation<{ conversation: Conversation; credits: number; success?: boolean }, Error, void>({
     mutationFn: async () => {
+      console.log("🔵 [createConversation] Sending request...");
       const result = await apiRequest("POST", "/api/conversations", {
         title: "New Conversation",
       });
-      return result.json();
-    },
-    onSuccess: (newConversation: Conversation) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
-      refreshCredits(); // Refresh credits after creating conversation
-      setLocation(`/chat/${newConversation.id}`);
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Could not create conversation",
-        variant: "destructive",
-      });
-    },
-  });
+      const data = await result.json();
+      console.log("🟢 [createConversation] Response received:", data);
 
-  const deleteConversationMutation = useMutation({
-    mutationFn: async (id: string) => {
-      await apiRequest("DELETE", `/api/conversations/${id}`, undefined);
+      if (!result.ok) {
+        throw new Error(data.message || data.error || "Failed to create conversation");
+      }
+
+      // Handle both new structured format and potential legacy flat format
+      if (data.success && data.conversation) {
+        return data;
+      } else if (data.id) {
+        // Legacy fallback
+        return { conversation: data, credits: data.credits, success: true };
+      }
+
+      throw new Error("Invalid response format from server");
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
-      setLocation("/dashboard");
-      toast({
-        title: "Conversation deleted",
-        description: "The conversation has been removed",
-        variant: "destructive",
-      });
+    onSuccess: (data) => {
+      console.log("✨ [createConversation] Success handler triggered", data);
+      const { conversation, credits } = data;
+
+      if (!conversation || !conversation.id) {
+        console.error("❌ [createConversation] Missing conversation ID in response", data);
+        toast({
+          title: "Error",
+          description: "Conversation created but ID missing",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["conversations"] });
+      // Update credits in cache immediately with the returned value
+      queryClient.setQueryData(["user", "credits", user?.id], (old: any) => ({
+        ...old,
+        remainingCredits: credits,
+      }));
+
+      console.log(`🚀 [createConversation] Navigating to /chat/${conversation.id}`);
+      setLocation(`/chat/${conversation.id}`);
+    },
+    onError: (error: any) => {
+      console.error("💥 [createConversation] Error handler triggered", error);
+      if (error.message?.includes("NO_CREDITS") || error.error === "NO_CREDITS") {
+        toast({
+          title: "Out of credits",
+          description: "You need more credits to start a new conversation.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: error.message || "Could not create conversation",
+          variant: "destructive",
+        });
+      }
     },
   });
 
@@ -92,15 +121,15 @@ export function AppSidebar() {
     },
     onMutate: async ({ id, title }) => {
       // Optimistically update UI
-      await queryClient.cancelQueries({ queryKey: ["/api/conversations"] });
-      const prev = queryClient.getQueryData<Conversation[]>(["/api/conversations"]);
+      await queryClient.cancelQueries({ queryKey: ["conversations"] });
+      const prev = queryClient.getQueryData<Conversation[]>(["conversations"]);
       if (prev) {
-        queryClient.setQueryData(["/api/conversations"], prev.map(c => c.id === id ? { ...c, title } : c));
+        queryClient.setQueryData(["conversations"], prev.map(c => c.id === id ? { ...c, title } : c));
       }
       return { prev };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
+      queryClient.invalidateQueries({ queryKey: ["conversations"] });
       setEditingId(null);
       setEditTitle("");
       toast({
@@ -112,7 +141,7 @@ export function AppSidebar() {
     onError: (_err, _vars, ctx) => {
       // Rollback optimistic update
       if (ctx?.prev) {
-        queryClient.setQueryData(["/api/conversations"], ctx.prev);
+        queryClient.setQueryData(["conversations"], ctx.prev);
       }
       toast({
         title: "Error",
@@ -121,8 +150,30 @@ export function AppSidebar() {
       });
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
+      queryClient.invalidateQueries({ queryKey: ["conversations"] });
     },
+  });
+
+  const deleteConversationMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/conversations/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["conversations"] });
+      setLocation("/dashboard");
+      toast({
+        title: "Conversation deleted",
+        description: "The conversation has been removed",
+        variant: "destructive",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Could not delete conversation",
+        variant: "destructive",
+      });
+    }
   });
 
   const handleLogout = async () => {
@@ -153,13 +204,13 @@ export function AppSidebar() {
       handleCancelRename();
       return;
     }
-    
+
     const newTitle = editTitle.trim();
     if (!newTitle) {
       handleCancelRename();
       return;
     }
-    
+
     console.log('Saving rename:', { id: editingId, title: newTitle });
     updateConversationMutation.mutate({ id: editingId, title: newTitle });
   };
@@ -176,10 +227,9 @@ export function AppSidebar() {
           <div className="flex items-center gap-2 hover-elevate rounded-lg p-2 -m-2 transition-all">
             <Leaf className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
             <span className="text-base sm:text-lg font-semibold">AyurChat</span>
-            <CreditsButton
-              credits={credits}
-              maxCredits={maxCredits}
-            />
+            <div className="ml-auto">
+              <CreditsDisplay compact />
+            </div>
           </div>
         </Link>
       </SidebarHeader>
@@ -226,14 +276,13 @@ export function AppSidebar() {
                   conversations.map((conversation) => {
                     const isActive = location === `/chat/${conversation.id}`;
                     const isEditing = editingId === conversation.id;
-                    
+
                     return (
                       <SidebarMenuItem key={conversation.id}>
-                        <div className={`group flex items-center gap-2 px-2 py-2 rounded-lg transition-all hover:bg-muted/50 ${
-                          isActive ? 'bg-primary/10 border border-primary/20' : ''
-                        }`}>
+                        <div className={`group flex items-center gap-2 px-2 py-2 rounded-lg transition-all hover:bg-muted/50 ${isActive ? 'bg-primary/10 border border-primary/20' : ''
+                          }`}>
                           <MessageSquare className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                          
+
                           {isEditing ? (
                             <input
                               value={editTitle}
@@ -257,7 +306,7 @@ export function AppSidebar() {
                               <span className="text-sm truncate block">{conversation.title}</span>
                             </Link>
                           )}
-                          
+
                           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <Button
                               variant="ghost"

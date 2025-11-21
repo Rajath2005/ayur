@@ -1,8 +1,8 @@
-import { 
+import {
   type User, type InsertUser,
   type Conversation, type InsertConversation,
   type Message, type InsertMessage,
-  type Appointment, type InsertAppointment 
+  type Appointment, type InsertAppointment
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -13,28 +13,29 @@ export interface IStorage {
   getUserByUsername(username: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
-  
+
   // Conversations
   getConversation(id: string): Promise<Conversation | undefined>;
   getConversationsByUserId(userId: string): Promise<Conversation[]>;
   createConversation(conversation: InsertConversation): Promise<Conversation>;
   updateConversation(id: string, updates: Partial<Conversation>): Promise<Conversation>;
   deleteConversation(id: string): Promise<void>;
-  
+
   // Messages
   getMessagesByConversationId(conversationId: string): Promise<Message[]>;
   createMessage(message: InsertMessage): Promise<Message>;
   updateMessage(id: string, updates: Partial<Message>): Promise<Message>;
   updateMessageByConversation?(conversationId: string, messageId: string, updates: Partial<Message>): Promise<Message>;
-  
+
   // Appointments
   createAppointment(appointment: InsertAppointment): Promise<Appointment>;
   getAppointmentsByUserId(userId: string): Promise<Appointment[]>;
 
   // Credits
   getUserCredits?(uid: string): Promise<number>;
+  getUserCreditsDetails?(uid: string): Promise<{ totalCredits: number; cycleStart: Date; cycleEnd: Date } | null>;
   deductCredits?(uid: string, amount: number, reason: string): Promise<number>;
-  logCreditUsage?(uid: string, deducted: number, reason: string): Promise<void>;
+  logCreditUsage?(uid: string, deducted: number, reason: string, before?: number, after?: number): Promise<void>;
   resetCreditsForUser?(uid: string, newCredits?: number): Promise<void>;
   resetCreditsForAllUsers?(newCredits?: number): Promise<void>;
 }
@@ -73,8 +74,8 @@ export class MemStorage implements IStorage {
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = randomUUID();
     const now = new Date();
-    const user: User = { 
-      ...insertUser, 
+    const user: User = {
+      ...insertUser,
       id,
       credits: (insertUser as any).credits ?? 40,
       plan: (insertUser as any).plan ?? 'free',
@@ -115,10 +116,10 @@ export class MemStorage implements IStorage {
     if (!conversation) {
       throw new Error("Conversation not found");
     }
-    const updated = { 
-      ...conversation, 
-      ...updates, 
-      updatedAt: new Date() 
+    const updated = {
+      ...conversation,
+      ...updates,
+      updatedAt: new Date()
     };
     this.conversations.set(id, updated);
     return updated;

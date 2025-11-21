@@ -84,8 +84,9 @@ export default function ChatPage() {
         throw new Error(error.message || "Failed to send message");
       }
 
-      // Return IDs for tracking
-      return { userMessageId, assistantMessageId };
+      const result = await res.json();
+      // Return IDs and credits for tracking
+      return { userMessageId, assistantMessageId, credits: result.credits };
     },
     onMutate: async (content: string) => {
       // Cancel outgoing fetches
@@ -125,21 +126,26 @@ export default function ChatPage() {
       const previousMessages = queryClient.getQueryData<Message[]>(["messages", conversationId]) || [];
       return { previousMessages, userMessageId, assistantMessageId };
     },
-    onSuccess: async ({ userMessageId, assistantMessageId }) => {
+    onSuccess: async (data) => {
       // Invalidate queries to get fresh data from server
       queryClient.invalidateQueries({ queryKey: ["messages", conversationId] });
       queryClient.invalidateQueries({ queryKey: ["conversations"] });
       setIsTyping(false);
 
-      // Refresh credits after successful message send
-      refreshCredits();
+      // Update credits in cache immediately with the returned value
+      if (data.credits !== undefined) {
+        queryClient.setQueryData(["user", "credits", user?.id], (old: any) => ({
+          ...old,
+          remainingCredits: data.credits,
+        }));
+      }
 
       // Start listening for message updates
       const checkMessageInterval = setInterval(async () => {
         const res = await apiRequest(`GET`, `/api/conversations/${conversationId}/messages`);
         if (res.ok) {
           const messages = await res.json();
-          const assistantMessage = messages.find((m: Message) => m.id === assistantMessageId);
+          const assistantMessage = messages.find((m: Message) => m.id === data.assistantMessageId);
           if (assistantMessage?.content) {
             clearInterval(checkMessageInterval);
             queryClient.invalidateQueries({ queryKey: ["messages", conversationId] });

@@ -4,7 +4,7 @@ export interface IUser extends Document {
   _id: string;
   username: string;
   password: string;
-  email: string;
+  // email removed as it's handled by Firebase and causes duplicate key errors
   totalCredits: number;
   usedCredits: number;
   remainingCredits: number;
@@ -18,7 +18,6 @@ const UserSchema = new Schema<IUser>({
   _id: { type: String, required: true },
   username: { type: String, required: true, unique: true },
   password: { type: String, default: '' }, // Not required for Firebase users
-  email: { type: String, default: '' }, // Not required for Firebase users
   totalCredits: { type: Number, required: true, default: 40 },
   usedCredits: { type: Number, required: true, default: 0 },
   remainingCredits: { type: Number, required: true, default: 40 },
@@ -33,6 +32,5 @@ const UserSchema = new Schema<IUser>({
 
 // Add indexes for better query performance
 UserSchema.index({ username: 1 }, { unique: true });
-UserSchema.index({ email: 1 }, { unique: true, sparse: true }); // Allow multiple empty emails
 
 export const User = mongoose.model<IUser>('User', UserSchema);

@@ -2,24 +2,24 @@
 
 /**
  * Deducts credits based on the type of action
- * @param {string} type - Type of action: "NEW_CHAT" or "BOT_RESPONSE"
+ * @param {string} type - Type of action: "NEW_CHAT", "BOT_RESPONSE", or "IMAGE_GENERATION"
  * @returns {Promise<number>} - Remaining credits after deduction
  */
 export async function deductCredits(type) {
-  const amount = type === "NEW_CHAT" ? 2 : type === "BOT_RESPONSE" ? 1 : 0;
+  const amount = type === "NEW_CHAT" ? 2 : type === "BOT_RESPONSE" ? 1 : type === "IMAGE_GENERATION" ? 5 : 0;
 
   if (amount === 0) {
     throw new Error("Invalid credit deduction type");
   }
 
   try {
-    // This would typically call an API endpoint
+    // Call the API endpoint to deduct credits
     const response = await fetch('/api/credits/deduct', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ type, amount }),
+      body: JSON.stringify({ type }),
     });
 
     if (!response.ok) {
@@ -46,9 +46,9 @@ export async function getRemainingCredits() {
     }
     const data = await response.json();
     return {
-      remainingCredits: data.credits,
+      remainingCredits: data.remainingCredits,
       totalCredits: data.maxCredits,
-      usedCredits: data.maxCredits - data.credits,
+      usedCredits: data.maxCredits - data.remainingCredits,
     };
   } catch (error) {
     console.error('Error fetching credits:', error);

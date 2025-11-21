@@ -51,6 +51,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/conversations", verifyFirebaseToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = req.user!.uid;
+      console.log(`🔵 [POST /api/conversations] Request received from user: ${userId}`, req.body);
+
+      if (!req.body.title) {
+        return res.status(400).json({ message: "Title is required" });
+      }
+
+      let newCredits: number;
+      try {
+        // Strict credit check: Fail if deduction fails
+        newCredits = await storage.deductCredits!(userId, 2, "NEW_CHAT");
+        console.log(`💰 [POST /api/conversations] Credits deducted. Remaining: ${newCredits}`);
+      } catch (error: any) {
+        console.error("❌ [POST /api/conversations] Credit deduction failed:", error);
+        if (error.message === "Insufficient credits") {
+          const currentCredits = await storage.getUserCredits!(userId);
+          return res.status(403).json({ error: "NO_CREDITS", credits: currentCredits });
+        }
+        // Fail hard if credits can't be processed
+        return res.status(500).json({ message: "Failed to process credits. Conversation not created." });
+      }
+
+      const data = {
+        userId,
+        title: req.body.title,
+      };
+
+      const conversation = await storage.createConversation(data);
+      console.log("✅ [POST /api/conversations] DB Insert Success:", conversation);
+
+      // Enforce strict response format
+      const response = {
+        success: true,
+        conversation: {
+          id: conversation.id, // Ensure this is mapped correctly in storage
+          title: conversation.title,
+          userId: conversation.userId,
+          createdAt: conversation.createdAt,
+          updatedAt: conversation.updatedAt
+        },
+        credits: newCredits
+      };
+
+      console.log("📤 [POST /api/conversations] Sending response:", JSON.stringify(response));
+      res.json(response);
+
+    } catch (error: any) {
+      console.error("❌ [POST /api/conversations] Critical Error:", error);
+      console.error("Error stack:", error.stack);
+      res.status(500).json({ message: error.message || "Failed to create conversation" });
+    }
+  });
+
   app.get("/api/conversations/:id", verifyFirebaseToken, async (req: AuthRequest, res: Response) => {
     try {
       const conversation = await storage.getConversation(req.params.id);
@@ -67,33 +122,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Get conversation error:", error);
       res.status(500).json({ message: "Failed to fetch conversation" });
-    }
-  });
-
-  app.post("/api/conversations", verifyFirebaseToken, async (req: AuthRequest, res: Response) => {
-    try {
-      const userId = req.user!.uid;
-      if (!req.body.title) {
-        return res.status(400).json({ message: "Title is required" });
-      }
-
-      // Check and deduct 2 credits for creating conversation
-      const currentCredits = await storage.getUserCredits!(userId);
-      if (currentCredits < 2) {
-        return res.status(403).json({ error: "NO_CREDITS", credits: currentCredits });
-      }
-      const newCredits = await storage.deductCredits!(userId, 2, "create_conversation");
-
-      const data = {
-        userId,
-        title: req.body.title,
-      };
-      const conversation = await storage.createConversation(data);
-      res.json({ ...conversation, credits: newCredits });
-    } catch (error: any) {
-      console.error("Create conversation error:", error);
-      console.error("Error stack:", error.stack);
-      res.status(500).json({ message: error.message || "Failed to create conversation" });
     }
   });
 
@@ -181,9 +209,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Forbidden" });
       }
 
-      // Check credits before proceeding
+      // Check credits before proceeding - but don't deduct yet
       const currentCredits = await storage.getUserCredits!(userId);
-      console.log("[CREDITS BEFORE]", currentCredits);
       if (currentCredits < 1) {
         return res.status(403).json({ error: "NO_CREDITS", credits: currentCredits });
       }
@@ -206,11 +233,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // 3. Get AI response
       const aiResponse = await getChatResponse(content, conversationHistory);
-      console.log("[AI RESPONSE]", aiResponse.content);
 
       // Deduct credits only after successful AI response
-      const newCredits = await storage.deductCredits!(userId, 1, "send_message");
-      console.log("[CREDITS AFTER]", newCredits);
+      // Use atomic deduction here
+      let newCredits;
+      try {
+        newCredits = await storage.deductCredits!(userId, 1, "BOT_RESPONSE");
+      } catch (error: any) {
+        if (error.message === "Insufficient credits") {
+          // This is a race condition edge case where credits were used up during generation
+          return res.status(403).json({ error: "NO_CREDITS", credits: 0 });
+        }
+        throw error;
+      }
 
       // 4. Save AI message with messageId for idempotency
       const assistantMessage = await storage.createMessage({
@@ -240,7 +275,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/symptom", verifyFirebaseToken, async (req: AuthRequest, res: Response) => {
     try {
       const { symptoms, conversationId } = req.body;
-      
+
       if (!symptoms || typeof symptoms !== "string") {
         return res.status(400).json({ message: "Symptoms are required" });
       }
@@ -251,7 +286,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (conversationId) {
         const userId = req.user!.uid;
         const conversation = await storage.getConversation(conversationId);
-        
+
         if (conversation && conversation.userId === userId) {
           await storage.createMessage({
             conversationId,
@@ -280,7 +315,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/remedies", verifyFirebaseToken, async (req: AuthRequest, res: Response) => {
     try {
       const { condition, dosha } = req.body;
-      
+
       if (!condition || typeof condition !== "string") {
         return res.status(400).json({ message: "Condition is required" });
       }
@@ -333,18 +368,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check and deduct 2 credits for creating image chat session
-      const currentCredits = await storage.getUserCredits!(userId);
-      if (currentCredits < 2) {
-        return res.status(403).json({ error: "NO_CREDITS", credits: currentCredits });
-      }
-      const newCredits = await storage.deductCredits!(userId, 2, "create_image_chat_session");
+      try {
+        const newCredits = await storage.deductCredits!(userId, 2, "NEW_CHAT");
 
-      const data = {
-        userId,
-        title: req.body.title,
-      };
-      const session = await storage.createConversation(data);
-      res.json({ ...session, credits: newCredits });
+        const data = {
+          userId,
+          title: req.body.title,
+        };
+        const session = await storage.createConversation(data);
+        res.json({ ...session, credits: newCredits });
+      } catch (error: any) {
+        if (error.message === "Insufficient credits") {
+          const currentCredits = await storage.getUserCredits!(userId);
+          return res.status(403).json({ error: "NO_CREDITS", credits: currentCredits });
+        }
+        throw error;
+      }
     } catch (error: any) {
       console.error("Create image chat session error:", error);
       console.error("Error stack:", error.stack);
@@ -411,7 +450,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Check credits before proceeding
       const currentCredits = await storage.getUserCredits!(userId);
-      console.log("[IMAGE CHAT CREDITS BEFORE]", currentCredits);
       if (currentCredits < 1) {
         return res.status(403).json({ error: "NO_CREDITS", credits: currentCredits });
       }
@@ -454,11 +492,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         aiResponse = await getChatResponse(content, conversationHistory);
       }
 
-      console.log("[IMAGE CHAT AI RESPONSE]", aiResponse.content);
-
       // Deduct credits only after successful AI response
-      const newCredits = await storage.deductCredits!(userId, 1, "send_image_message");
-      console.log("[IMAGE CHAT CREDITS AFTER]", newCredits);
+      // Deduct 5 for image generation/analysis, 1 for text
+      const deductionAmount = imageUrl ? 5 : 1;
+      const deductionType = imageUrl ? "IMAGE_GENERATION" : "BOT_RESPONSE";
+
+      let newCredits;
+      try {
+        newCredits = await storage.deductCredits!(userId, deductionAmount, deductionType);
+      } catch (error: any) {
+        if (error.message === "Insufficient credits") {
+          return res.status(403).json({ error: "NO_CREDITS", credits: 0 });
+        }
+        throw error;
+      }
 
       // 4. Save AI message with messageId for idempotency
       const assistantMessage = await storage.createMessage({
@@ -489,10 +536,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user!.uid;
       const credits = await storage.getUserCredits!(userId);
-      res.json({ credits, maxCredits: 40 });
+      const user = await storage.getUserCreditsDetails!(userId);
+      res.json({
+        success: true,
+        remainingCredits: credits,
+        maxCredits: user?.totalCredits || 40,
+        usedCredits: (user?.totalCredits || 40) - credits,
+        cycleStart: user?.cycleStart,
+        cycleEnd: user?.cycleEnd,
+        plan: 'free'
+      });
     } catch (error: any) {
       console.error("Get credits error:", error);
       res.status(500).json({ message: error.message || "Failed to get credits" });
+    }
+  });
+
+  // DEDUCT CREDITS
+  app.post("/api/credits/deduct", verifyFirebaseToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = req.user!.uid;
+      const { type } = req.body;
+
+      if (!type || !["NEW_CHAT", "BOT_RESPONSE", "IMAGE_GENERATION"].includes(type)) {
+        return res.status(400).json({ message: "Invalid credit deduction type" });
+      }
+
+      // Map type to credit amount
+      const creditAmounts = {
+        "NEW_CHAT": 2,
+        "BOT_RESPONSE": 1,
+        "IMAGE_GENERATION": 5
+      };
+
+      const amount = creditAmounts[type as keyof typeof creditAmounts];
+
+      try {
+        const remainingCredits = await storage.deductCredits!(userId, amount, type);
+        const user = await storage.getUserCreditsDetails!(userId);
+
+        res.json({
+          success: true,
+          remainingCredits,
+          usedCredits: (user?.totalCredits || 40) - remainingCredits,
+          maxCredits: user?.totalCredits || 40
+        });
+      } catch (error: any) {
+        if (error.message === "Insufficient credits") {
+          return res.status(403).json({ success: false, error: "Insufficient credits" });
+        }
+        throw error;
+      }
+    } catch (error: any) {
+      console.error("Deduct credits error:", error);
+      res.status(500).json({ message: error.message || "Failed to deduct credits" });
+    }
+  });
+
+  // RESET CREDITS
+  app.post("/api/credits/reset", verifyFirebaseToken, async (req: AuthRequest, res: Response) => {
+    try {
+      // In a real app, this should be protected by admin role or API key
+      // For now, we'll allow it for testing purposes but maybe restrict to own user or specific admin
+      const userId = req.user!.uid;
+      await storage.resetCreditsForUser!(userId);
+      res.json({ message: "Credits reset successfully" });
+    } catch (error: any) {
+      console.error("Reset credits error:", error);
+      res.status(500).json({ message: error.message || "Failed to reset credits" });
     }
   });
 
