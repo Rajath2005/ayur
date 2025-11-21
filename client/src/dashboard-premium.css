@@ -1,0 +1,132 @@
+/* Premium Dashboard Animations */
+@keyframes fade-in {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slide-up {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes scale-in {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.animate-fade-in {
+    animation: fade-in 0.6s ease-out;
+}
+
+.animate-slide-up {
+    animation: slide-up 0.6s ease-out;
+}
+
+.animate-scale-in {
+    animation: scale-in 0.5s ease-out;
+}
+
+.animate-delay-100 {
+    animation-delay: 100ms;
+}
+
+.animate-delay-200 {
+    animation-delay: 200ms;
+}
+
+.animate-delay-300 {
+    animation-delay: 300ms;
+}
+
+/* Ayurvedic Gradient Backgrounds */
+.bg-ayur-gradient {
+    background: linear-gradient(135deg,
+            hsl(142 45% 96%) 0%,
+            hsl(142 35% 98%) 50%,
+            hsl(120 40% 97%) 100%);
+}
+
+.dark .bg-ayur-gradient {
+    background: linear-gradient(135deg,
+            hsl(142 20% 10%) 0%,
+            hsl(142 15% 8%) 50%,
+            hsl(120 18% 9%) 100%);
+}
+
+.bg-ayur-gradient-subtle {
+    background: linear-gradient(to bottom,
+            transparent 0%,
+            hsl(142 30% 95% / 0.3) 100%);
+}
+
+.dark .bg-ayur-gradient-subtle {
+    background: linear-gradient(to bottom,
+            transparent 0%,
+            hsl(142 20% 15% / 0.3) 100%);
+}
+
+/* Premium Card Styles */
+.card-premium {
+    box-shadow: 0px 6px 12px -2px hsl(142 15% 15% / 0.10), 0px 3px 6px -3px hsl(142 15% 15% / 0.08);
+    transition: all 0.3s ease;
+}
+
+.card-premium:hover {
+    transform: translateY(-2px);
+    box-shadow: 0px 10px 20px -4px hsl(142 15% 15% / 0.12), 0px 4px 8px -4px hsl(142 15% 15% / 0.08);
+}
+
+/* Icon Background Gradients */
+.icon-bg-gradient {
+    background: linear-gradient(135deg,
+            hsl(var(--primary) / 0.1) 0%,
+            hsl(var(--primary) / 0.05) 100%);
+}
+
+/* Button Glow Effect */
+.btn-glow {
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-glow::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+.btn-glow:hover::before {
+    width: 300px;
+    height: 300px;
+}
+
+/* Smooth Scroll */
+.smooth-scroll {
+    scroll-behavior: smooth;
+}

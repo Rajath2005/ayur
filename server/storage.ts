@@ -38,6 +38,7 @@ export interface IStorage {
   logCreditUsage?(uid: string, deducted: number, reason: string, before?: number, after?: number): Promise<void>;
   resetCreditsForUser?(uid: string, newCredits?: number): Promise<void>;
   resetCreditsForAllUsers?(newCredits?: number): Promise<void>;
+  getCreditLogs?(uid: string, limit?: number): Promise<any[]>;
 }
 
 // In-memory storage implementation

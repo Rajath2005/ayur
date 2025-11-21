@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { MessageSquare, Camera, User, LogOut, Settings, ChevronDown, ArrowRight, Clock } from "lucide-react";
+import { MessageSquare, Camera, User, LogOut, Settings, ChevronDown, ArrowRight, Clock, Sparkles } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
@@ -21,6 +21,7 @@ import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Conversation } from "@shared/schema";
+import "../dashboard-premium.css";
 
 export default function Dashboard() {
   const { user, logout } = useAuth();
@@ -121,7 +122,7 @@ export default function Dashboard() {
       <div className="flex h-screen w-full">
         <AppSidebar />
         <div className="flex flex-col flex-1">
-          <header className="flex items-center justify-between p-4 border-b">
+          <header className="flex items-center justify-between p-4 border-b backdrop-blur-sm bg-background/95">
             <SidebarTrigger data-testid="button-sidebar-toggle" />
             <div className="flex items-center gap-4">
               <DropdownMenu>
@@ -163,7 +164,7 @@ export default function Dashboard() {
                     <span>Settings</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem 
+                  <DropdownMenuItem
                     onClick={handleLogout}
                     className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950"
                   >
@@ -176,27 +177,32 @@ export default function Dashboard() {
             </div>
           </header>
           <UserDashboard open={isUserDashboardOpen} onOpenChange={setIsUserDashboardOpen} />
-          <main className="flex-1 overflow-auto p-4 md:p-6">
-            <div className="max-w-4xl mx-auto space-y-6">
-              {/* Hero Greeting */}
-              <div className="text-center md:text-left">
-                <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
-                  Welcome back, {user?.name || 'Friend'}! 👋
-                </h1>
-                <p className="text-muted-foreground mt-1">
-                  Your AI-powered Ayurvedic wellness assistant.
-                </p>
+          <main className="flex-1 overflow-auto smooth-scroll">
+            <div className="max-w-5xl mx-auto space-y-8 p-6 md:p-8 lg:p-10">
+              {/* Hero Greeting with Gradient Background */}
+              <div className="relative overflow-hidden rounded-2xl bg-ayur-gradient p-8 md:p-10 animate-fade-in">
+                <div className="absolute top-0 right-0 w-64 h-64 opacity-10">
+                  <Sparkles className="w-full h-full text-primary" />
+                </div>
+                <div className="relative z-10">
+                  <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight mb-3">
+                    Welcome back, {user?.name || 'Friend'}! 👋
+                  </h1>
+                  <p className="text-lg md:text-xl text-muted-foreground max-w-2xl">
+                    Your AI-powered Ayurvedic wellness assistant is here to guide you on your journey to holistic health.
+                  </p>
+                </div>
               </div>
 
-              {/* Primary CTA Card */}
-              <Card className="border-2 border-primary/20">
-                <CardContent className="p-6">
-                  <div className="text-center space-y-4">
-                    <h2 className="text-lg font-semibold">How can I help you today?</h2>
-                    <div className="flex flex-col sm:flex-row gap-3">
-                      <Button 
-                        size="lg" 
-                        className="flex-1 gap-2 h-12"
+              {/* Primary CTA Card with Enhanced Styling */}
+              <Card className="border-2 border-primary/20 card-premium animate-slide-up">
+                <CardContent className="p-8">
+                  <div className="text-center space-y-6">
+                    <h2 className="text-2xl font-semibold tracking-tight">How can I help you today?</h2>
+                    <div className="flex flex-col sm:flex-row gap-4 max-w-2xl mx-auto">
+                      <Button
+                        size="lg"
+                        className="flex-1 gap-2 h-14 text-base btn-glow shadow-md hover:shadow-lg transition-all"
                         onClick={() => createConversationMutation.mutate()}
                         disabled={createConversationMutation.isPending}
                       >
@@ -206,7 +212,7 @@ export default function Dashboard() {
                       <Button
                         size="lg"
                         variant="outline"
-                        className="flex-1 gap-2 h-12"
+                        className="flex-1 gap-2 h-14 text-base border-2 hover:border-primary/50 hover:bg-primary/5 transition-all shadow-sm hover:shadow-md"
                         onClick={() => createImageChatSessionMutation.mutate()}
                         disabled={createImageChatSessionMutation.isPending}
                       >
@@ -219,19 +225,19 @@ export default function Dashboard() {
               </Card>
 
               {/* Recent Activity / Continue Chat */}
-              <Card>
+              <Card className="card-premium animate-slide-up animate-delay-100">
                 <CardContent className="p-6">
                   {latestConversation ? (
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="font-medium">Continue where you left off</h3>
-                        <p className="text-sm text-muted-foreground truncate">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                      <div className="space-y-1">
+                        <h3 className="text-lg font-semibold">Continue where you left off</h3>
+                        <p className="text-sm text-muted-foreground line-clamp-1">
                           {latestConversation.title}
                         </p>
                       </div>
-                      <Button 
-                        variant="outline" 
-                        className="gap-2"
+                      <Button
+                        variant="outline"
+                        className="gap-2 hover:bg-primary hover:text-primary-foreground transition-all"
                         onClick={() => setLocation(`/chat/${latestConversation.id}`)}
                       >
                         Resume Chat
@@ -239,36 +245,42 @@ export default function Dashboard() {
                       </Button>
                     </div>
                   ) : (
-                    <div className="text-center py-4">
-                      <p className="text-muted-foreground">
-                        No conversations yet. Start your first conversation!
+                    <div className="text-center py-8">
+                      <p className="text-muted-foreground text-base">
+                        No conversations yet. Start your first conversation to begin your wellness journey!
                       </p>
                     </div>
                   )}
                 </CardContent>
               </Card>
 
-              {/* Stats Row */}
-              <div className="grid grid-cols-3 gap-4">
-                {stats.map((stat) => (
-                  <Card key={stat.title}>
-                    <CardContent className="p-4 text-center">
-                      <stat.icon className="h-5 w-5 text-primary mx-auto mb-2" />
-                      <div className="text-lg font-bold" data-testid={`stat-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}>
-                        {stat.value}
+              {/* Stats Row with Enhanced Design */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                {stats.map((stat, index) => (
+                  <Card key={stat.title} className={`card-premium animate-slide-up animate-delay-${(index + 1) * 100}`}>
+                    <CardContent className="p-6">
+                      <div className="flex flex-col items-center text-center space-y-4">
+                        <div className="w-16 h-16 rounded-full icon-bg-gradient flex items-center justify-center">
+                          <stat.icon className="h-8 w-8 text-primary" />
+                        </div>
+                        <div className="space-y-1">
+                          <div className="text-3xl font-bold tracking-tight" data-testid={`stat-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                            {stat.value}
+                          </div>
+                          <p className="text-sm text-muted-foreground font-medium">
+                            {stat.title}
+                          </p>
+                        </div>
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        {stat.title}
-                      </p>
                     </CardContent>
                   </Card>
                 ))}
               </div>
 
               {/* Footer Note */}
-              <div className="text-center pt-4">
-                <p className="text-xs text-muted-foreground">
-                  AyurChat provides AI-generated wellness guidance and is not a medical diagnostic tool.
+              <div className="text-center pt-6 pb-4 animate-fade-in">
+                <p className="text-xs text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+                  AyurChat provides AI-generated wellness guidance based on Ayurvedic principles and is not a substitute for professional medical advice, diagnosis, or treatment.
                 </p>
               </div>
             </div>

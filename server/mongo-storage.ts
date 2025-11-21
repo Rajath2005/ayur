@@ -450,4 +450,24 @@ export class MongoStorage implements IStorage {
       await this.resetCreditsForUser(user._id, newCredits);
     }
   }
+
+  async getCreditLogs(uid: string, limit: number = 5): Promise<any[]> {
+    try {
+      const logs = await CreditLog.find({ userId: uid })
+        .sort({ timestamp: -1 })
+        .limit(limit);
+
+      return logs.map(log => ({
+        id: log._id,
+        type: log.type,
+        amount: log.amount,
+        before: log.before,
+        after: log.after,
+        timestamp: log.timestamp
+      }));
+    } catch (error) {
+      console.error('MongoDB getCreditLogs error:', error);
+      return [];
+    }
+  }
 }

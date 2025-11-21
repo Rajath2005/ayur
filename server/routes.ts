@@ -552,6 +552,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET USER CREDITS DETAILS (WITH HISTORY)
+  app.get("/api/users/me/credits/details", verifyFirebaseToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = req.user!.uid;
+      console.log('[Credits Details] Fetching for user:', userId);
+
+      const credits = await storage.getUserCredits!(userId);
+      console.log('[Credits Details] Credits:', credits);
+
+      const user = await storage.getUserCreditsDetails!(userId);
+      console.log('[Credits Details] User details:', user);
+
+      const history = await storage.getCreditLogs!(userId, 5);
+      console.log('[Credits Details] History count:', history?.length || 0);
+
+      const response = {
+        success: true,
+        remainingCredits: credits,
+        maxCredits: user?.totalCredits || 40,
+        usedCredits: (user?.totalCredits || 40) - credits,
+        cycleStart: user?.cycleStart,
+        cycleEnd: user?.cycleEnd,
+        resetInDays: user?.cycleEnd ? Math.ceil((new Date(user.cycleEnd).getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : 15,
+        usageHistory: history || [],
+        plan: 'free'
+      };
+
+      console.log('[Credits Details] Sending response:', JSON.stringify(response, null, 2));
+      res.json(response);
+    } catch (error: any) {
+      console.error("Get credits details error:", error);
+      res.status(500).json({ message: error.message || "Failed to get credits details" });
+    }
+  });
+
   // DEDUCT CREDITS
   app.post("/api/credits/deduct", verifyFirebaseToken, async (req: AuthRequest, res: Response) => {
     try {
@@ -596,8 +631,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // RESET CREDITS
   app.post("/api/credits/reset", verifyFirebaseToken, async (req: AuthRequest, res: Response) => {
     try {
-      // In a real app, this should be protected by admin role or API key
-      // For now, we'll allow it for testing purposes but maybe restrict to own user or specific admin
       const userId = req.user!.uid;
       await storage.resetCreditsForUser!(userId);
       res.json({ message: "Credits reset successfully" });
