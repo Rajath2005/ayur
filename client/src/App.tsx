@@ -12,6 +12,10 @@ import Register from "@/pages/register";
 import Dashboard from "@/pages/dashboard";
 import ChatPage from "@/pages/chat";
 import ImageChatPage from "@/pages/ImageChat";
+import ProfilePage from "@/pages/profile";
+import SettingsPage from "@/pages/settings";
+import ConversationsPage from "@/pages/conversations";
+import SubscriptionPage from "@/pages/subscription";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -33,6 +37,26 @@ function Router() {
       <Route path="/image-chat/:id">
         <ProtectedRoute>
           <ImageChatPage />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/profile">
+        <ProtectedRoute>
+          <ProfilePage />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/settings">
+        <ProtectedRoute>
+          <SettingsPage />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/conversations">
+        <ProtectedRoute>
+          <ConversationsPage />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/subscription">
+        <ProtectedRoute>
+          <SubscriptionPage />
         </ProtectedRoute>
       </Route>
       <Route component={NotFound} />

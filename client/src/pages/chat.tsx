@@ -370,24 +370,7 @@ export default function ChatPage() {
               </div>
             </div>
             <div className="flex items-center gap-4">
-              <button
-                onClick={() => setIsUserDashboardOpen(true)}
-                className="flex items-center gap-3 hover:opacity-80 transition-opacity cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-lg px-2 py-1"
-                data-testid="button-user-profile"
-              >
-                <Avatar className="h-8 w-8">
-                  {user?.avatar && (
-                    <AvatarImage src={user.avatar} alt={user?.name || user?.email || "User"} />
-                  )}
-                  <AvatarFallback className="bg-primary text-primary-foreground">
-                    {user?.name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'U'}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="hidden md:block text-left">
-                  <p className="text-sm font-medium">{user?.name || user?.email}</p>
-                  <p className="text-xs text-muted-foreground">{user?.email}</p>
-                </div>
-              </button>
+
               <ThemeToggle />
             </div>
           </header>

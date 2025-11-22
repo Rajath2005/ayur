@@ -470,4 +470,121 @@ export class MongoStorage implements IStorage {
       return [];
     }
   }
+
+  // User Profile methods
+  async getUserProfile(userId: string): Promise<any | null> {
+    try {
+      const { UserProfile } = await import('./models/UserProfile');
+      const profile = await UserProfile.findOne({ userId });
+
+      if (!profile) return null;
+
+      return {
+        id: profile._id,
+        userId: profile.userId,
+        name: profile.name,
+        email: profile.email,
+        avatar: profile.avatar,
+        bio: profile.bio,
+        phone: profile.phone,
+        createdAt: profile.createdAt,
+        updatedAt: profile.updatedAt,
+      };
+    } catch (error) {
+      console.error('MongoDB getUserProfile error:', error);
+      return null;
+    }
+  }
+
+  async updateUserProfile(userId: string, data: any): Promise<any> {
+    try {
+      const { UserProfile } = await import('./models/UserProfile');
+
+      const profile = await UserProfile.findOneAndUpdate(
+        { userId },
+        {
+          $set: {
+            ...data,
+            updatedAt: new Date(),
+          },
+          $setOnInsert: {
+            userId,
+            createdAt: new Date(),
+          }
+        },
+        { upsert: true, new: true }
+      );
+
+      return {
+        id: profile._id,
+        userId: profile.userId,
+        name: profile.name,
+        email: profile.email,
+        avatar: profile.avatar,
+        bio: profile.bio,
+        phone: profile.phone,
+        createdAt: profile.createdAt,
+        updatedAt: profile.updatedAt,
+      };
+    } catch (error) {
+      console.error('MongoDB updateUserProfile error:', error);
+      throw new Error(`Failed to update profile: ${error}`);
+    }
+  }
+
+  // User Settings methods
+  async getUserSettings(userId: string): Promise<any | null> {
+    try {
+      const { UserSettings } = await import('./models/UserSettings');
+      const settings = await UserSettings.findOne({ userId });
+
+      if (!settings) return null;
+
+      return {
+        id: settings._id,
+        userId: settings.userId,
+        theme: settings.theme,
+        emailNotifications: settings.emailNotifications,
+        pushNotifications: settings.pushNotifications,
+        profileVisibility: settings.profileVisibility,
+        updatedAt: settings.updatedAt,
+      };
+    } catch (error) {
+      console.error('MongoDB getUserSettings error:', error);
+      return null;
+    }
+  }
+
+  async updateUserSettings(userId: string, data: any): Promise<any> {
+    try {
+      const { UserSettings } = await import('./models/UserSettings');
+
+      const settings = await UserSettings.findOneAndUpdate(
+        { userId },
+        {
+          $set: {
+            ...data,
+            updatedAt: new Date(),
+          },
+          $setOnInsert: {
+            userId,
+          }
+        },
+        { upsert: true, new: true }
+      );
+
+      return {
+        id: settings._id,
+        userId: settings.userId,
+        theme: settings.theme,
+        emailNotifications: settings.emailNotifications,
+        pushNotifications: settings.pushNotifications,
+        profileVisibility: settings.profileVisibility,
+        updatedAt: settings.updatedAt,
+      };
+    } catch (error) {
+      console.error('MongoDB updateUserSettings error:', error);
+      throw new Error(`Failed to update settings: ${error}`);
+    }
+  }
 }

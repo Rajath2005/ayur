@@ -39,6 +39,152 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  // USER PROFILE ROUTES
+  app.get("/api/users/me/profile", verifyFirebaseToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = req.user!.uid;
+      const profile = await storage.getUserProfile?.(userId);
+
+      if (!profile) {
+        // Return default profile from Firebase Auth
+        return res.json({
+          id: userId,
+          userId,
+          email: req.user!.email || "",
+          name: req.user!.name || req.user!.email || "",
+          avatar: req.user!.picture || null,
+          bio: null,
+          phone: null,
+        });
+      }
+
+      res.json(profile);
+    } catch (error: any) {
+      console.error("Get profile error:", error);
+      res.status(500).json({ message: error.message || "Failed to get profile" });
+    }
+  });
+
+  app.put("/api/users/me/profile", verifyFirebaseToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = req.user!.uid;
+      const { name, bio, phone, avatar } = req.body;
+
+      // Check if storage method is available
+      if (!storage.updateUserProfile) {
+        console.error("[Profile Update] updateUserProfile method not available in storage");
+        return res.status(501).json({
+          message: "Profile updates not supported. MongoDB may not be configured."
+        });
+      }
+
+      const profileData = {
+        userId,
+        email: req.user!.email || "",
+        name,
+        bio,
+        phone,
+        avatar,
+      };
+
+      console.log('[Profile Update] Updating profile for user:', userId, profileData);
+      const updatedProfile = await storage.updateUserProfile(userId, profileData);
+      console.log('[Profile Update] Success:', updatedProfile);
+      res.json(updatedProfile);
+    } catch (error: any) {
+      console.error("Update profile error:", error);
+      console.error("Error stack:", error.stack);
+      res.status(500).json({ message: error.message || "Failed to update profile" });
+    }
+  });
+
+  app.post("/api/users/me/avatar", upload.single('avatar'), verifyFirebaseToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = req.user!.uid;
+
+      if (!req.file) {
+        return res.status(400).json({ message: "No avatar file provided" });
+      }
+
+      if (!storage.updateUserProfile) {
+        return res.status(501).json({ message: "Avatar upload not supported" });
+      }
+
+      // Convert to base64 data URL for MongoDB storage
+      const base64 = req.file.buffer.toString('base64');
+      const avatarUrl = `data:${req.file.mimetype};base64,${base64}`;
+
+      // Update profile with new avatar
+      const profile = await storage.updateUserProfile(userId, {
+        userId,
+        email: req.user!.email || "",
+        avatar: avatarUrl
+      });
+
+      res.json({ avatar: avatarUrl, profile });
+    } catch (error: any) {
+      console.error("Upload avatar error:", error);
+      res.status(500).json({ message: error.message || "Failed to upload avatar" });
+    }
+  });
+
+  // USER SETTINGS ROUTES
+  app.get("/api/users/me/settings", verifyFirebaseToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = req.user!.uid;
+      const settings = await storage.getUserSettings?.(userId);
+
+      if (!settings) {
+        // Return default settings
+        return res.json({
+          userId,
+          theme: 'light',
+          emailNotifications: true,
+          pushNotifications: false,
+          profileVisibility: 'public',
+        });
+      }
+
+      res.json(settings);
+    } catch (error: any) {
+      console.error("Get settings error:", error);
+      res.status(500).json({ message: error.message || "Failed to get settings" });
+    }
+  });
+
+  app.put("/api/users/me/settings", verifyFirebaseToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = req.user!.uid;
+      const { theme, emailNotifications, pushNotifications, profileVisibility } = req.body;
+
+      // Check if storage method is available
+      if (!storage.updateUserSettings) {
+        console.error("[Settings Update] updateUserSettings method not available in storage");
+        return res.status(501).json({
+          message: "Settings updates not supported. MongoDB may not be configured."
+        });
+      }
+
+      const settingsData = {
+        userId,
+        theme,
+        emailNotifications,
+        pushNotifications,
+        profileVisibility,
+      };
+
+      console.log('[Settings Update] Updating settings for user:', userId, settingsData);
+      const updatedSettings = await storage.updateUserSettings(userId, settingsData);
+      console.log('[Settings Update] Success:', updatedSettings);
+      res.json(updatedSettings);
+    } catch (error: any) {
+      console.error("Update settings error:", error);
+      console.error("Error stack:", error.stack);
+      res.status(500).json({ message: error.message || "Failed to update settings" });
+    }
+  });
+
+
   // CONVERSATION ROUTES
   app.get("/api/conversations", verifyFirebaseToken, async (req: AuthRequest, res: Response) => {
     try {
@@ -325,6 +471,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Herbal remedies error:", error);
       res.status(500).json({ message: error.message || "Failed to get remedies" });
+    }
+  });
+
+  app.put("/api/users/me/profile", verifyFirebaseToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = req.user!.uid;
+      const { name, bio, phone, avatar } = req.body;
+
+      // Check if storage method is available
+      if (!storage.updateUserProfile) {
+        console.error("[Profile Update] updateUserProfile method not available in storage");
+        return res.status(501).json({
+          message: "Profile updates not supported. MongoDB may not be configured."
+        });
+      }
+
+      const profileData = {
+        userId,
+        email: req.user!.email || "",
+        name,
+        bio,
+        phone,
+        avatar,
+      };
+
+      console.log('[Profile Update] Updating profile for user:', userId, profileData);
+      const updatedProfile = await storage.updateUserProfile(userId, profileData);
+      console.log('[Profile Update] Success:', updatedProfile);
+      res.json(updatedProfile);
+    } catch (error: any) {
+      console.error("Update profile error:", error);
+      console.error("Error stack:", error.stack);
+      res.status(500).json({ message: error.message || "Failed to update profile" });
     }
   });
 

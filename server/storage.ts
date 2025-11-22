@@ -39,6 +39,14 @@ export interface IStorage {
   resetCreditsForUser?(uid: string, newCredits?: number): Promise<void>;
   resetCreditsForAllUsers?(newCredits?: number): Promise<void>;
   getCreditLogs?(uid: string, limit?: number): Promise<any[]>;
+
+  // User Profile
+  getUserProfile?(userId: string): Promise<any | null>;
+  updateUserProfile?(userId: string, data: any): Promise<any>;
+
+  // User Settings
+  getUserSettings?(userId: string): Promise<any | null>;
+  updateUserSettings?(userId: string, data: any): Promise<any>;
 }
 
 // In-memory storage implementation
