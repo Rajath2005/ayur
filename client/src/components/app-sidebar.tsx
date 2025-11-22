@@ -3,7 +3,6 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Plus, MessageSquare, Trash2, Leaf, LogOut, Edit3, Check, X, Menu } from "lucide-react";
 import { useState } from "react";
 import {
-  Sidebar,
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
@@ -241,16 +240,18 @@ export function AppSidebar() {
       )}
 
 
-      <Sidebar
+      <aside
         className={`
           fixed lg:relative
           inset-y-0 left-0
-          w-64 lg:w-auto
+          w-64 lg:w-[--sidebar-width]
           z-50
-          backdrop-blur-xl bg-sidebar/95
+          flex flex-col h-full
+          bg-sidebar/95 backdrop-blur-xl
+          text-sidebar-foreground
           border-r border-sidebar-border
           shadow-xl
-          transition-all duration-300 ease-in-out
+          transition-transform duration-300 ease-in-out
           ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
       >
@@ -471,7 +472,7 @@ export function AppSidebar() {
             <span className="text-sm">Logout</span>
           </Button>
         </SidebarFooter>
-      </Sidebar>
+      </aside>
     </>
   );
 }
