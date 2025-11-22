@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Plus, MessageSquare, Trash2, Leaf, LogOut, Edit3 } from "lucide-react";
+import { Plus, MessageSquare, Trash2, Leaf, LogOut, Edit3, Check, X, Menu } from "lucide-react";
 import { useState } from "react";
 import {
   Sidebar,
@@ -9,7 +9,6 @@ import {
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarMenu,
-  SidebarMenuButton,
   SidebarMenuItem,
   SidebarHeader,
   SidebarFooter,
@@ -31,6 +30,7 @@ export function AppSidebar() {
   const { logout, user } = useAuth();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   const { credits, maxCredits, refreshCredits } = useCredits();
 
@@ -94,6 +94,7 @@ export function AppSidebar() {
 
       console.log(`🚀 [createConversation] Navigating to /chat/${conversation.id}`);
       setLocation(`/chat/${conversation.id}`);
+      setIsMobileOpen(false); // Close mobile menu after creating conversation
     },
     onError: (error: any) => {
       console.error("💥 [createConversation] Error handler triggered", error);
@@ -221,140 +222,256 @@ export function AppSidebar() {
   };
 
   return (
-    <Sidebar className="relative z-40">
-      <SidebarHeader className="p-3 sm:p-4 border-b">
-        <Link href="/dashboard">
-          <div className="flex items-center gap-2 hover-elevate rounded-lg p-2 -m-2 transition-all">
-            <Leaf className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
-            <span className="text-base sm:text-lg font-semibold">AyurChat</span>
-            <div className="ml-auto">
-              <CreditsDisplay compact />
+    <>
+      {/* Mobile Menu Toggle Button */}
+      <button
+        onClick={() => setIsMobileOpen(!isMobileOpen)}
+        className="lg:hidden fixed top-4 left-4 z-[60] p-2.5 rounded-xl bg-card/95 backdrop-blur-md border border-border shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 active:scale-95"
+        aria-label="Toggle menu"
+      >
+        <Menu className="h-5 w-5 text-foreground" />
+      </button>
+
+      {/* Mobile Overlay */}
+      {isMobileOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-[45] animate-in fade-in duration-200"
+          onClick={() => setIsMobileOpen(false)}
+        />
+      )}
+
+
+      <Sidebar
+        className={`
+          fixed lg:relative
+          inset-y-0 left-0
+          w-64 lg:w-auto
+          z-50
+          backdrop-blur-xl bg-sidebar/95
+          border-r border-sidebar-border
+          shadow-xl
+          transition-all duration-300 ease-in-out
+          ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+        `}
+      >
+        {/* Enhanced Header with Gradient Background */}
+        <SidebarHeader className="p-4 sm:p-5 border-b border-sidebar-border/50 bg-gradient-to-br from-primary/5 via-transparent to-primary/5">
+          <Link href="/dashboard" onClick={() => setIsMobileOpen(false)}>
+            <div className="flex items-center gap-3 hover-elevate rounded-xl p-3 -m-3 transition-all duration-200 hover:shadow-md group">
+              <div className="p-2 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 group-hover:from-primary/30 group-hover:to-primary/20 transition-all duration-200">
+                <Leaf className="h-5 w-5 sm:h-6 sm:w-6 text-primary drop-shadow-sm" />
+              </div>
+              <span className="text-lg sm:text-xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                AyurChat
+              </span>
+              <div className="ml-auto">
+                <CreditsDisplay compact />
+              </div>
             </div>
-          </div>
-        </Link>
-      </SidebarHeader>
+          </Link>
+        </SidebarHeader>
 
-      <SidebarContent>
-        <SidebarGroup>
-          <div className="px-4 py-2">
-            <Button
-              className="w-full gap-2"
-              onClick={() => createConversationMutation.mutate()}
-              disabled={createConversationMutation.isPending}
-              data-testid="button-new-chat"
-            >
-              <Plus className="h-4 w-4" />
-              New Chat
-            </Button>
-          </div>
-        </SidebarGroup>
+        <SidebarContent className="py-2">
+          {/* New Chat Button with Enhanced Styling */}
+          <SidebarGroup>
+            <div className="px-3 py-3">
+              <Button
+                className="w-full gap-2 h-11 rounded-xl font-semibold shadow-md hover:shadow-lg transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary"
+                onClick={() => createConversationMutation.mutate()}
+                disabled={createConversationMutation.isPending}
+                data-testid="button-new-chat"
+              >
+                <Plus className="h-5 w-5" />
+                <span className="text-sm">New Chat</span>
+              </Button>
+            </div>
+          </SidebarGroup>
 
-        <SidebarGroup className="flex-1">
-          <SidebarGroupLabel className="px-4 text-xs font-medium text-muted-foreground uppercase tracking-wide">
-            Recent Conversations
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <ScrollArea className="h-full px-2">
-              <SidebarMenu className="space-y-1">
-                {isLoading ? (
-                  <div className="px-4 py-8 text-center text-sm text-muted-foreground animate-pulse">
-                    <div className="inline-flex items-center gap-2">
-                      <div className="h-4 w-4 rounded-full bg-muted"></div>
-                      Loading conversations...
+          {/* Conversations List with Enhanced Styling */}
+          <SidebarGroup className="flex-1 mt-2">
+            <SidebarGroupLabel className="px-5 py-2 text-xs font-bold text-muted-foreground/80 uppercase tracking-wider">
+              Recent Conversations
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <ScrollArea className="h-full px-2">
+                <SidebarMenu className="space-y-1.5 py-2">
+                  {isLoading ? (
+                    <div className="px-4 py-12 text-center text-sm text-muted-foreground">
+                      <div className="inline-flex flex-col items-center gap-3 animate-in fade-in duration-500">
+                        <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 animate-pulse"></div>
+                        <span className="font-medium">Loading conversations...</span>
+                      </div>
                     </div>
-                  </div>
-                ) : !user ? (
-                  <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-                    Sign in to see your conversations
-                  </div>
-                ) : conversations.length === 0 ? (
-                  <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-                    <p>No conversations yet</p>
-                    <p className="mt-2 text-xs">Click "New Chat" to get started</p>
-                  </div>
-                ) : (
-                  conversations.map((conversation) => {
-                    const isActive = location === `/chat/${conversation.id}`;
-                    const isEditing = editingId === conversation.id;
-
-                    return (
-                      <SidebarMenuItem key={conversation.id}>
-                        <div className={`group flex items-center gap-2 px-2 py-2 rounded-lg transition-all hover:bg-muted/50 ${isActive ? 'bg-primary/10 border border-primary/20' : ''
-                          }`}>
-                          <MessageSquare className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-
-                          {isEditing ? (
-                            <input
-                              value={editTitle}
-                              onChange={(e) => setEditTitle(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  e.preventDefault();
-                                  handleSaveRename();
-                                }
-                                if (e.key === 'Escape') {
-                                  e.preventDefault();
-                                  handleCancelRename();
-                                }
-                              }}
-                              onBlur={handleSaveRename}
-                              className="flex-1 bg-transparent text-sm px-1 border-b border-primary/50 focus:outline-none"
-                              autoFocus
-                            />
-                          ) : (
-                            <Link href={`/chat/${conversation.id}`} className="flex-1 min-w-0">
-                              <span className="text-sm truncate block">{conversation.title}</span>
-                            </Link>
-                          )}
-
-                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 hover:bg-muted"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleRename(conversation);
-                              }}
-                              data-testid={`button-rename-${conversation.id}`}
-                            >
-                              <Edit3 className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 hover:bg-red-100 hover:text-red-600"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                deleteConversationMutation.mutate(conversation.id);
-                              }}
-                              data-testid={`button-delete-${conversation.id}`}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </div>
+                  ) : !user ? (
+                    <div className="px-4 py-12 text-center text-sm text-muted-foreground">
+                      <div className="inline-flex flex-col items-center gap-2">
+                        <Leaf className="h-8 w-8 text-muted-foreground/40" />
+                        <span>Sign in to see your conversations</span>
+                      </div>
+                    </div>
+                  ) : conversations.length === 0 ? (
+                    <div className="px-4 py-12 text-center text-sm text-muted-foreground">
+                      <div className="inline-flex flex-col items-center gap-3">
+                        <div className="p-4 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5">
+                          <MessageSquare className="h-8 w-8 text-primary/60" />
                         </div>
-                      </SidebarMenuItem>
-                    );
-                  })
-                )}
-              </SidebarMenu>
-            </ScrollArea>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
+                        <div>
+                          <p className="font-semibold text-foreground/70">No conversations yet</p>
+                          <p className="mt-1.5 text-xs text-muted-foreground/70">Click "New Chat" to get started</p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    conversations.map((conversation, index) => {
+                      const isActive = location === `/chat/${conversation.id}`;
+                      const isEditing = editingId === conversation.id;
 
-      <SidebarFooter className="p-4 border-t">
-        <Button
-          variant="ghost"
-          className="w-full justify-start gap-2 bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 hover:text-red-800 dark:bg-red-950 dark:text-red-300 dark:border-red-800 dark:hover:bg-red-900 dark:hover:text-red-200 shadow-sm"
-          onClick={handleLogout}
-          data-testid="button-logout"
-        >
-          <LogOut className="h-4 w-4" />
-          Logout
-        </Button>
-      </SidebarFooter>
-    </Sidebar>
+                      return (
+                        <SidebarMenuItem
+                          key={conversation.id}
+                          className="animate-in slide-in-from-left duration-300"
+                          style={{ animationDelay: `${index * 30}ms` }}
+                        >
+                          <div
+                            className={`
+                              group relative flex items-center gap-3 px-3 py-3 rounded-xl
+                              transition-all duration-200
+                              hover:bg-gradient-to-r hover:from-muted/60 hover:to-muted/40
+                              hover:shadow-sm hover:scale-[1.01]
+                              ${isActive
+                                ? 'bg-gradient-to-r from-primary/15 via-primary/10 to-primary/5 border-l-2 border-primary shadow-sm ring-1 ring-primary/20'
+                                : 'hover:border-l-2 hover:border-primary/30'
+                              }
+                            `}
+                          >
+                            {/* Icon with gradient background */}
+                            <div className={`
+                              p-1.5 rounded-lg transition-all duration-200
+                              ${isActive
+                                ? 'bg-gradient-to-br from-primary/25 to-primary/15'
+                                : 'bg-muted/50 group-hover:bg-muted'
+                              }
+                            `}>
+                              <MessageSquare className={`h-4 w-4 transition-colors ${isActive ? 'text-primary' : 'text-muted-foreground'}`} />
+                            </div>
+
+                            {/* Title or Edit Input */}
+                            {isEditing ? (
+                              <div className="flex-1 flex items-center gap-2">
+                                <input
+                                  value={editTitle}
+                                  onChange={(e) => setEditTitle(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      e.preventDefault();
+                                      handleSaveRename();
+                                    }
+                                    if (e.key === 'Escape') {
+                                      e.preventDefault();
+                                      handleCancelRename();
+                                    }
+                                  }}
+                                  className="flex-1 bg-background/50 text-sm px-2 py-1 rounded-lg border-2 border-primary/50 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                                  autoFocus
+                                />
+                                <div className="flex items-center gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 rounded-lg hover:bg-primary/20 hover:text-primary"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleSaveRename();
+                                    }}
+                                  >
+                                    <Check className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 rounded-lg hover:bg-destructive/20 hover:text-destructive"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleCancelRename();
+                                    }}
+                                  >
+                                    <X className="h-3.5 w-3.5" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ) : (
+                              <Link
+                                href={`/chat/${conversation.id}`}
+                                className="flex-1 min-w-0"
+                                onClick={() => setIsMobileOpen(false)}
+                              >
+                                <span className={`text-sm truncate block font-medium transition-colors ${isActive ? 'text-foreground' : 'text-foreground/80 group-hover:text-foreground'}`}>
+                                  {conversation.title}
+                                </span>
+                              </Link>
+                            )}
+
+                            {/* Action Buttons */}
+                            {!isEditing && (
+                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 rounded-lg hover:bg-primary/20 hover:text-primary transition-all duration-200 hover:scale-110"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRename(conversation);
+                                  }}
+                                  data-testid={`button-rename-${conversation.id}`}
+                                >
+                                  <Edit3 className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 rounded-lg hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/50 dark:hover:text-red-400 transition-all duration-200 hover:scale-110"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    deleteConversationMutation.mutate(conversation.id);
+                                  }}
+                                  data-testid={`button-delete-${conversation.id}`}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        </SidebarMenuItem>
+                      );
+                    })
+                  )}
+                </SidebarMenu>
+              </ScrollArea>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </SidebarContent>
+
+        {/* Enhanced Footer with Gradient */}
+        <SidebarFooter className="p-4 border-t border-sidebar-border/50 bg-gradient-to-t from-sidebar/50 to-transparent">
+          <Button
+            variant="ghost"
+            className="w-full h-11 justify-start gap-3 rounded-xl font-semibold
+              bg-gradient-to-r from-red-50 to-red-50/80 text-red-700 
+              border border-red-200/80 
+              hover:from-red-100 hover:to-red-100/90 hover:text-red-800 hover:border-red-300
+              dark:from-red-950/80 dark:to-red-950/60 dark:text-red-300 
+              dark:border-red-800/50 
+              dark:hover:from-red-900/90 dark:hover:to-red-900/70 dark:hover:text-red-200 dark:hover:border-red-700
+              shadow-sm hover:shadow-md
+              transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+            onClick={handleLogout}
+            data-testid="button-logout"
+          >
+            <LogOut className="h-4 w-4" />
+            <span className="text-sm">Logout</span>
+          </Button>
+        </SidebarFooter>
+      </Sidebar>
+    </>
   );
 }
