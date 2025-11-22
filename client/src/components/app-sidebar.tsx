@@ -1,7 +1,8 @@
 import { Link, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Plus, MessageSquare, Trash2, Leaf, LogOut, Edit3, Check, X, Menu } from "lucide-react";
+import { Plus, MessageSquare, Trash2, Leaf, Edit3, Check, X, Menu } from "lucide-react";
 import { useState } from "react";
+import { ProfilePopover } from "@/components/profile-popover";
 import {
   SidebarContent,
   SidebarGroup,
@@ -26,7 +27,7 @@ import { CreditsDisplay } from "@/components/credits-display";
 export function AppSidebar() {
   const [location, setLocation] = useLocation();
   const { toast } = useToast();
-  const { logout, user } = useAuth();
+  const { user } = useAuth();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [isMobileOpen, setIsMobileOpen] = useState(false);
@@ -176,23 +177,7 @@ export function AppSidebar() {
     }
   });
 
-  const handleLogout = async () => {
-    try {
-      await logout();
-      setLocation("/");
-      toast({
-        title: "Logged out",
-        description: "You have been successfully logged out",
-        variant: "success",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Could not log out",
-        variant: "destructive",
-      });
-    }
-  };
+
 
   const handleRename = (conversation: Conversation) => {
     setEditingId(conversation.id);
@@ -452,25 +437,9 @@ export function AppSidebar() {
           </SidebarGroup>
         </SidebarContent>
 
-        {/* Enhanced Footer with Gradient */}
+        {/* Enhanced Footer with Profile Popover */}
         <SidebarFooter className="p-4 border-t border-sidebar-border/50 bg-gradient-to-t from-sidebar/50 to-transparent">
-          <Button
-            variant="ghost"
-            className="w-full h-11 justify-start gap-3 rounded-xl font-semibold
-              bg-gradient-to-r from-red-50 to-red-50/80 text-red-700 
-              border border-red-200/80 
-              hover:from-red-100 hover:to-red-100/90 hover:text-red-800 hover:border-red-300
-              dark:from-red-950/80 dark:to-red-950/60 dark:text-red-300 
-              dark:border-red-800/50 
-              dark:hover:from-red-900/90 dark:hover:to-red-900/70 dark:hover:text-red-200 dark:hover:border-red-700
-              shadow-sm hover:shadow-md
-              transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
-            onClick={handleLogout}
-            data-testid="button-logout"
-          >
-            <LogOut className="h-4 w-4" />
-            <span className="text-sm">Logout</span>
-          </Button>
+          <ProfilePopover />
         </SidebarFooter>
       </aside>
     </>
