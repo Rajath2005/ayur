@@ -1,19 +1,91 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
-    <title>AyurChat - Your Ayurvedic AI Wellness Companion</title>
-    <meta name="description" content="Experience personalized Ayurvedic wellness guidance with AyurChat. Get expert advice on natural remedies, symptoms, and holistic health powered by AI." />
-    <meta property="og:title" content="AyurChat - Ayurvedic AI Wellness Companion" />
-    <meta property="og:description" content="Personalized Ayurvedic wellness guidance powered by AI. Natural remedies, symptom checking, and holistic health advice." />
-    <meta property="og:type" content="website" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<style>
+  /* Critical Preloader Styles */
+  #preloader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  .preloader-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    animation: breathe 3s infinite ease-in-out;
+  }
+
+  .logo-mark {
+    width: 64px;
+    height: 64px;
+    background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+    border-radius: 50% 0 50% 50%;
+    margin-bottom: 24px;
+    box-shadow: 0 20px 25px -5px rgba(22, 163, 74, 0.2), 0 10px 10px -5px rgba(22, 163, 74, 0.1);
+    transform: rotate(-45deg);
+    position: relative;
+  }
+
+  .logo-mark::after {
+    content: '';
+    position: absolute;
+    top: 20%;
+    left: 20%;
+    width: 30%;
+    height: 30%;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+  }
+
+  .app-name {
+    font-size: 28px;
+    font-weight: 700;
+    color: #14532d;
+    letter-spacing: -0.03em;
+    margin-bottom: 8px;
+  }
+
+  .tagline {
+    font-size: 15px;
+    font-weight: 500;
+    color: #166534;
+    opacity: 0.9;
+  }
+
+  @keyframes breathe {
+
+    0%,
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+
+    50% {
+      transform: scale(1.03);
+      opacity: 0.9;
+    }
+  }
+</style>
+</head>
+
+<body>
+  <div id="root">
+    <!-- Preloader HTML (Will be replaced by React) -->
+    <div id="preloader">
+      <div class="preloader-content">
+        <div class="logo-mark"></div>
+        <div class="app-name">AyuDost AI</div>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+
 </html>

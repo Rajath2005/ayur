@@ -60,12 +60,12 @@ async function getWorkingModel(): Promise<string> {
   }
 
   console.log("🔍 Finding compatible Gemini model...");
-  
+
   for (const modelName of MODEL_FALLBACKS) {
     try {
       console.log(`   Testing: ${modelName}...`);
       const model = genAI.getGenerativeModel({ model: modelName });
-      
+
       // Try a simple request to verify it works
       const result = await model.generateContent("Hi");
       if (result?.response?.text()) {
@@ -85,10 +85,10 @@ async function getWorkingModel(): Promise<string> {
 async function generate(prompt: string): Promise<string> {
   try {
     console.log("\n🔄 Initializing Gemini model...");
-    
+
     // Get a working model
     const modelName = await getWorkingModel();
-    
+
     const model: GenerativeModel = genAI.getGenerativeModel({
       model: modelName,
       generationConfig: {
@@ -104,7 +104,7 @@ async function generate(prompt: string): Promise<string> {
 
     console.log("🚀 Sending request to Gemini API...");
     const result = await model.generateContent(prompt);
-    
+
     console.log("📥 Received response from Gemini API");
 
     if (!result?.response) {
@@ -112,21 +112,21 @@ async function generate(prompt: string): Promise<string> {
     }
 
     const text = result.response.text();
-    
+
     if (!text || text.trim().length === 0) {
       throw new Error("Empty text response from Gemini");
     }
 
     console.log(`✅ Response received (${text.length} characters)`);
     console.log(`📄 Preview: ${text.slice(0, 100)}...`);
-    
+
     return text;
 
   } catch (err: any) {
     console.error("\n❌ GEMINI API ERROR:");
     console.error("  Message:", err?.message || "Unknown error");
     console.error("  Type:", err?.constructor?.name);
-    
+
     if (err?.status) {
       console.error("  Status:", err.status);
     }
@@ -144,7 +144,7 @@ async function generate(prompt: string): Promise<string> {
     if (err?.message?.includes("blocked") || err?.message?.includes("safety")) {
       return "⚠️ Response blocked by safety filters. Please rephrase your question.";
     }
-    
+
     return "⚠️ I'm experiencing technical difficulties. Please try again in a moment.";
   }
 }
@@ -163,7 +163,7 @@ export async function getChatResponse(
     .map((m) => `${m.role === "user" ? "User" : "Assistant"}: ${m.content}`)
     .join("\n\n");
 
-  const prompt = `You are AyurChat, an Ayurvedic wellness & lifestyle assistant.
+  const prompt = `You are AyuDost AI, an Ayurvedic wellness \& lifestyle assistant.
 You provide safe, general guidance based on Ayurvedic principles.
 You never provide medical diagnosis or replace professional medical advice.
 
@@ -174,8 +174,8 @@ Please provide a helpful, compassionate response based on Ayurvedic wellness pri
 
   const response = await generate(prompt);
 
-  return { 
+  return {
     content: response,
-    
+
   };
 }

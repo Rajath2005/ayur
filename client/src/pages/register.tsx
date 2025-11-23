@@ -89,8 +89,8 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-background p-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-primary/5 via-background to-background p-4 sm:p-8">
+      <div className="w-full max-w-md my-8">
         <div className="text-center mb-8">
           <Link href="/">
             <div className="inline-flex items-center gap-2 mb-4 hover-elevate rounded-lg p-2 -m-2 transition-all">
@@ -98,17 +98,17 @@ export default function Register() {
               <span className="text-2xl font-bold">AyurChat</span>
             </div>
           </Link>
-          <p className="text-muted-foreground">Start your Ayurvedic wellness journey</p>
+          <p className="text-muted-foreground text-sm sm:text-base">Start your Ayurvedic wellness journey</p>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Create Account</CardTitle>
+        <Card className="border-0 sm:border shadow-none sm:shadow-sm bg-transparent sm:bg-card">
+          <CardHeader className="px-0 sm:px-6">
+            <CardTitle className="text-xl sm:text-2xl">Create Account</CardTitle>
             <CardDescription>
               Join AyurChat to access personalized Ayurvedic guidance
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-0 sm:px-6">
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField
@@ -187,7 +187,7 @@ export default function Register() {
                   <Separator />
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-card px-2 text-muted-foreground">
+                  <span className="bg-background sm:bg-card px-2 text-muted-foreground">
                     Or continue with
                   </span>
                 </div>

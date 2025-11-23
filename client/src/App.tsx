@@ -64,12 +64,15 @@ function Router() {
   );
 }
 
+import Preloader from "./preloader/Preloader";
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <ThemeProvider defaultTheme="light">
           <TooltipProvider>
+            <Preloader />
             <Toaster />
             <Router />
           </TooltipProvider>

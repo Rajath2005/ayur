@@ -100,7 +100,7 @@ export default function SettingsPage() {
                             <div className="space-y-2">
                                 <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Settings</h1>
                                 <p className="text-muted-foreground">
-                                    Customize your AyurChat experience
+                                    Customize your AyuDost AI experience
                                 </p>
                             </div>
 
@@ -121,7 +121,7 @@ export default function SettingsPage() {
                                                 Appearance
                                             </CardTitle>
                                             <CardDescription>
-                                                Customize how AyurChat looks on your device
+                                                Customize how AyuDost AI looks on your device
                                             </CardDescription>
                                         </CardHeader>
                                         <CardContent className="space-y-4">
