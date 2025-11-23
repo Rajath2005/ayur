@@ -12,11 +12,13 @@ import Register from "@/pages/register";
 import Dashboard from "@/pages/dashboard";
 import ChatPage from "@/pages/chat";
 import ImageChatPage from "@/pages/ImageChat";
+import DrishtiPage from "@/pages/drishti";
 import ProfilePage from "@/pages/profile";
 import SettingsPage from "@/pages/settings";
 import ConversationsPage from "@/pages/conversations";
 import SubscriptionPage from "@/pages/subscription";
 import NotFound from "@/pages/not-found";
+import { MobileAppLayout } from "@/components/layouts/MobileAppLayout";
 
 function Router() {
   return (
@@ -37,6 +39,11 @@ function Router() {
       <Route path="/image-chat/:id">
         <ProtectedRoute>
           <ImageChatPage />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/drishti-upload">
+        <ProtectedRoute>
+          <DrishtiPage />
         </ProtectedRoute>
       </Route>
       <Route path="/profile">
@@ -74,7 +81,9 @@ function App() {
           <TooltipProvider>
             <Preloader />
             <Toaster />
-            <Router />
+            <MobileAppLayout>
+              <Router />
+            </MobileAppLayout>
           </TooltipProvider>
         </ThemeProvider>
       </AuthProvider>

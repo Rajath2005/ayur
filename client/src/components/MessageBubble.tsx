@@ -16,6 +16,7 @@ interface MessageBubbleProps {
     onReact?: (messageId: string, emoji: string) => void;
     status?: "sending" | "sent" | "delivered" | "seen";
     reactions?: { emoji: string; count: number; userReacted: boolean }[];
+    className?: string;
 }
 
 export function MessageBubble({
@@ -28,6 +29,7 @@ export function MessageBubble({
     onReact,
     status,
     reactions,
+    className,
 }: MessageBubbleProps) {
     const isUser = message.role === "user";
     const animationClass = isUser ? "animate-slide-in-right" : "animate-slide-in-left";
@@ -50,26 +52,26 @@ export function MessageBubble({
 
     return (
         <div
-            className={`flex gap-3 ${isUser ? "justify-end" : "justify-start"} ${animationClass}`}
+            className={`flex gap-2 md:gap-3 ${isUser ? "justify-end" : "justify-start"} ${animationClass} mb-6 md:mb-4`}
             data-testid={`message-${message.role}-${message.id}`}
         >
             {!isUser && (
-                <Avatar className="h-8 w-8 flex-shrink-0">
-                    <AvatarFallback className="bg-green-600 text-white text-xs">🌿</AvatarFallback>
+                <Avatar className="h-10 w-10 md:h-8 md:w-8 flex-shrink-0 shadow-sm">
+                    <AvatarFallback className="bg-gradient-to-br from-green-500 to-green-600 text-white text-sm md:text-xs">🌿</AvatarFallback>
                 </Avatar>
             )}
 
-            <div className="group relative max-w-[75%] flex flex-col">
+            <div className="group relative max-w-[85%] md:max-w-[75%] flex flex-col">
                 <div
-                    className={`rounded-3xl px-4 py-3 break-words shadow-sm transition-all duration-200 ${isUser
-                            ? "bg-gradient-to-br from-primary to-primary/90 text-primary-foreground"
-                            : "bg-muted border hover:shadow-md"
+                    className={`rounded-[24px] md:rounded-3xl px-5 md:px-4 py-4 md:py-3 break-words transition-all duration-300 ${isUser
+                        ? "bg-gradient-to-br from-primary via-primary to-primary/95 text-primary-foreground shadow-lg shadow-primary/20"
+                        : "bg-card border border-border/50 shadow-md hover:shadow-lg backdrop-blur-sm"
                         }`}
                 >
                     {isUser ? (
-                        <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                        <p className="text-[15px] md:text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
                     ) : (
-                        <div className="text-sm leading-relaxed prose prose-sm dark:prose-invert max-w-none">
+                        <div className="text-[15px] md:text-sm leading-relaxed prose prose-sm dark:prose-invert max-w-none prose-p:my-2 prose-headings:my-3">
                             <ReactMarkdown remarkPlugins={[remarkGfm]}>
                                 {message.content || "*Thinking...*"}
                             </ReactMarkdown>
@@ -77,8 +79,8 @@ export function MessageBubble({
                     )}
                 </div>
 
-                <div className="flex items-center gap-2 mt-1 px-2">
-                    <span className="text-xs text-muted-foreground">
+                <div className="flex items-center gap-2 mt-1.5 px-2">
+                    <span className="text-[11px] md:text-xs text-muted-foreground/80">
                         {formatDistanceToNow(new Date(message.createdAt), { addSuffix: true })}
                     </span>
                     {getStatusIcon()}
@@ -93,7 +95,7 @@ export function MessageBubble({
                 )}
 
                 <MessageActions
-                    role={message.role}
+                    role={message.role as "user" | "assistant"}
                     content={message.content}
                     onCopy={() => onCopy(message.content)}
                     onRegenerate={isUser && onRegenerate ? () => onRegenerate(message.content) : undefined}
@@ -103,11 +105,11 @@ export function MessageBubble({
             </div>
 
             {isUser && (
-                <Avatar className="h-8 w-8 flex-shrink-0">
+                <Avatar className="h-10 w-10 md:h-8 md:w-8 flex-shrink-0 shadow-sm">
                     {user?.avatar ? (
                         <AvatarImage src={user.avatar} alt={user?.name || "User"} />
                     ) : null}
-                    <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                    <AvatarFallback className="bg-gradient-to-br from-primary to-primary/90 text-primary-foreground text-sm md:text-xs font-medium">
                         {user?.name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || "U"}
                     </AvatarFallback>
                 </Avatar>

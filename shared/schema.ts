@@ -9,6 +9,33 @@ export interface MongoConversation {
   id: string; // UUID
   userId: string; // Firebase UID
   title: string;
+  mode?: 'GYAAN' | 'VAIDYA' | 'DRISHTI' | 'LEGACY';
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Vaidhya Session (MongoDB)
+export interface VaidhyaSession {
+  id: string;
+  conversationId: string;
+  userId: string;
+  questionsAsked: string[];
+  answers: { question: string; answer: string }[];
+  status: 'collecting' | 'diagnosed';
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Drishti Analysis (MongoDB)
+export interface DrishtiAnalysis {
+  id: string;
+  userId: string;
+  analysisId: string;
+  clientRequestId: string;
+  storagePath?: string;
+  status: 'reserved' | 'uploaded' | 'processing' | 'completed' | 'failed';
+  visualReport?: any;
+  refundLogId?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -74,6 +101,7 @@ export const insertConversationSchema = createInsertSchema(conversations).omit({
   updatedAt: true,
 }).extend({
   id: z.string().optional(),
+  mode: z.enum(['GYAAN', 'VAIDYA', 'DRISHTI', 'LEGACY']).optional(),
 });
 
 export const insertMessageSchema = createInsertSchema(messages).omit({
@@ -111,7 +139,9 @@ export const chatMessageSchema = z.object({
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertConversation = z.infer<typeof insertConversationSchema>;
-export type Conversation = typeof conversations.$inferSelect;
+export type Conversation = typeof conversations.$inferSelect & {
+  mode?: 'GYAAN' | 'VAIDYA' | 'DRISHTI' | 'LEGACY';
+};
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
 export type Message = typeof messages.$inferSelect;
 export type InsertAppointment = z.infer<typeof insertAppointmentSchema>;

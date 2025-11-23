@@ -11,6 +11,8 @@ import { Conversation as ConversationModel, IConversation } from "./models/Conve
 import { Message as MessageModel, IMessage } from "./models/Message";
 import { User as UserModel } from "./models/User";
 import { CreditLog } from "./models/CreditLog";
+import { VaidhyaSession, IVaidhyaSession } from "./models/VaidhyaSession";
+import { DrishtiAnalysis, IDrishtiAnalysis } from "./models/DrishtiAnalysis";
 
 export class MongoStorage implements IStorage {
   constructor() {
@@ -70,6 +72,7 @@ export class MongoStorage implements IStorage {
         id: conversation._id,
         userId: conversation.userId,
         title: conversation.title,
+        mode: conversation.mode,
         createdAt: conversation.createdAt,
         updatedAt: conversation.updatedAt,
       };
@@ -88,6 +91,7 @@ export class MongoStorage implements IStorage {
         id: conv._id,
         userId: conv.userId,
         title: conv.title,
+        mode: conv.mode,
         createdAt: conv.createdAt,
         updatedAt: conv.updatedAt,
       }));
@@ -106,6 +110,7 @@ export class MongoStorage implements IStorage {
         _id: id,
         userId: conversation.userId,
         title: conversation.title,
+        mode: conversation.mode || 'LEGACY',
         createdAt: now,
         updatedAt: now,
       });
@@ -116,6 +121,7 @@ export class MongoStorage implements IStorage {
         id: newConversation._id,
         userId: newConversation.userId,
         title: newConversation.title,
+        mode: newConversation.mode,
         createdAt: newConversation.createdAt,
         updatedAt: newConversation.updatedAt,
       };
@@ -129,6 +135,7 @@ export class MongoStorage implements IStorage {
     try {
       const updateData: any = { updatedAt: new Date() };
       if (updates.title !== undefined) updateData.title = updates.title;
+      if (updates.mode !== undefined) updateData.mode = updates.mode;
 
       const conversation = await ConversationModel.findByIdAndUpdate(
         id,
@@ -144,6 +151,7 @@ export class MongoStorage implements IStorage {
         id: conversation._id,
         userId: conversation.userId,
         title: conversation.title,
+        mode: conversation.mode,
         createdAt: conversation.createdAt,
         updatedAt: conversation.updatedAt,
       };
@@ -328,14 +336,13 @@ export class MongoStorage implements IStorage {
     }
   }
 
-  async deductCredits(uid: string, amount: number, reason: string): Promise<number> {
+  async deductCredits(uid: string, amount: number, reason: string, mode?: string, clientRequestId?: string): Promise<number> {
     const executeDeduction = async (retryCount = 0): Promise<number> => {
       try {
         const now = new Date();
         const cycleEnd = new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000); // 15 days
 
         // Ensure user exists first (upsert)
-        // We use findOneAndUpdate with upsert to atomically create if missing
         await UserModel.findOneAndUpdate(
           { _id: uid },
           {
@@ -385,7 +392,7 @@ export class MongoStorage implements IStorage {
         }
 
         // Log credit usage
-        await this.logCreditUsage(uid, amount, reason, updatedUser.remainingCredits + amount, updatedUser.remainingCredits);
+        await this.logCreditUsage(uid, amount, reason, updatedUser.remainingCredits + amount, updatedUser.remainingCredits, mode, clientRequestId);
 
         return updatedUser.remainingCredits;
 
@@ -407,7 +414,43 @@ export class MongoStorage implements IStorage {
     return executeDeduction();
   }
 
-  async logCreditUsage(uid: string, deducted: number, reason: string, before: number, after: number): Promise<void> {
+  async refundCredits(uid: string, amount: number, reason: string, clientRequestId?: string): Promise<number> {
+    try {
+      // Atomic increment
+      const updatedUser = await UserModel.findOneAndUpdate(
+        { _id: uid },
+        {
+          $inc: {
+            usedCredits: -amount,
+            remainingCredits: amount
+          }
+        },
+        { new: true }
+      );
+
+      if (!updatedUser) {
+        throw new Error("User not found for refund");
+      }
+
+      // Log refund
+      await this.logCreditUsage(
+        uid,
+        amount,
+        'REFUND',
+        updatedUser.remainingCredits - amount,
+        updatedUser.remainingCredits,
+        undefined,
+        clientRequestId
+      );
+
+      return updatedUser.remainingCredits;
+    } catch (error) {
+      console.error('❌ [refundCredits] Error:', error);
+      throw error;
+    }
+  }
+
+  async logCreditUsage(uid: string, deducted: number, reason: string, before: number, after: number, mode?: string, clientRequestId?: string): Promise<void> {
     try {
       const log = new CreditLog({
         userId: uid,
@@ -415,6 +458,8 @@ export class MongoStorage implements IStorage {
         amount: deducted,
         before,
         after,
+        mode,
+        clientRequestId,
         timestamp: new Date()
       });
       await log.save();
@@ -585,6 +630,88 @@ export class MongoStorage implements IStorage {
     } catch (error) {
       console.error('MongoDB updateUserSettings error:', error);
       throw new Error(`Failed to update settings: ${error}`);
+    }
+  }
+
+  // Vaidhya Session
+  async createVaidhyaSession(session: any): Promise<any> {
+    try {
+      const newSession = new VaidhyaSession({
+        _id: randomUUID(),
+        ...session,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+      await newSession.save();
+      return newSession.toObject();
+    } catch (error) {
+      console.error('MongoDB createVaidhyaSession error:', error);
+      throw error;
+    }
+  }
+
+  async getVaidhyaSession(conversationId: string): Promise<any> {
+    try {
+      const session = await VaidhyaSession.findOne({ conversationId });
+      return session ? session.toObject() : null;
+    } catch (error) {
+      console.error('MongoDB getVaidhyaSession error:', error);
+      throw error;
+    }
+  }
+
+  async updateVaidhyaSession(conversationId: string, updates: any): Promise<any> {
+    try {
+      const session = await VaidhyaSession.findOneAndUpdate(
+        { conversationId },
+        { $set: { ...updates, updatedAt: new Date() } },
+        { new: true }
+      );
+      return session ? session.toObject() : null;
+    } catch (error) {
+      console.error('MongoDB updateVaidhyaSession error:', error);
+      throw error;
+    }
+  }
+
+  // Drishti Analysis
+  async createDrishtiAnalysis(analysis: any): Promise<any> {
+    try {
+      const newAnalysis = new DrishtiAnalysis({
+        _id: randomUUID(),
+        ...analysis,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+      await newAnalysis.save();
+      return newAnalysis.toObject();
+    } catch (error) {
+      console.error('MongoDB createDrishtiAnalysis error:', error);
+      throw error;
+    }
+  }
+
+  async getDrishtiAnalysis(analysisId: string): Promise<any> {
+    try {
+      const analysis = await DrishtiAnalysis.findOne({ analysisId });
+      return analysis ? analysis.toObject() : null;
+    } catch (error) {
+      console.error('MongoDB getDrishtiAnalysis error:', error);
+      throw error;
+    }
+  }
+
+  async updateDrishtiAnalysis(analysisId: string, updates: any): Promise<any> {
+    try {
+      const analysis = await DrishtiAnalysis.findOneAndUpdate(
+        { analysisId },
+        { $set: { ...updates, updatedAt: new Date() } },
+        { new: true }
+      );
+      return analysis ? analysis.toObject() : null;
+    } catch (error) {
+      console.error('MongoDB updateDrishtiAnalysis error:', error);
+      throw error;
     }
   }
 }

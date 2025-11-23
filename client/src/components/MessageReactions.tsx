@@ -36,8 +36,8 @@ export function MessageReactions({
                             key={`${messageId}-${reaction.emoji}-${idx}`}
                             onClick={() => handleReact(reaction.emoji)}
                             className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs transition-all duration-200 ${reaction.userReacted
-                                    ? "bg-primary/20 border border-primary/40 hover:bg-primary/30"
-                                    : "bg-muted hover:bg-accent border border-transparent"
+                                ? "bg-primary/20 border border-primary/40 hover:bg-primary/30"
+                                : "bg-muted hover:bg-accent border border-transparent"
                                 }`}
                         >
                             <span>{reaction.emoji}</span>
@@ -54,7 +54,7 @@ export function MessageReactions({
                     <Button
                         variant="ghost"
                         size="sm"
-                        className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="h-6 w-6 p-0 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
                     >
                         <Smile className="h-3.5 w-3.5" />
                     </Button>

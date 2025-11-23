@@ -1,0 +1,258 @@
+/* Mobile-First Design System for AyuDost */
+
+/* Mobile CSS Variables */
+:root {
+    --mobile-breakpoint: 768px;
+    --tablet-breakpoint: 1024px;
+    --mobile-padding: 1rem;
+    --mobile-gap: 0.75rem;
+    --touch-target-min: 48px;
+    --touch-target-comfortable: 56px;
+    --mobile-text-base: 16px;
+    --mobile-text-lg: 18px;
+    --mobile-text-xl: 24px;
+    --mobile-radius: 1rem;
+    --mobile-radius-lg: 1.5rem;
+    --mobile-radius-xl: 2rem;
+    --bottom-nav-height: 64px;
+    --mobile-header-height: 56px;
+    --duration-fast: 150ms;
+    --duration-normal: 250ms;
+    --duration-slow: 350ms;
+    --z-base: 0;
+    --z-dropdown: 1000;
+    --z-sticky: 1100;
+    --z-fixed: 1200;
+    --z-modal-backdrop: 1300;
+    --z-modal: 1400;
+    --z-popover: 1500;
+    --z-tooltip: 1600;
+}
+
+/* Responsive Display */
+.mobile-only {
+    display: none;
+}
+
+.desktop-only {
+    display: block;
+}
+
+@media (max-width: 768px) {
+    .mobile-only {
+        display: block;
+    }
+
+    .desktop-only {
+        display: none;
+    }
+}
+
+/* Touch Targets */
+.touch-target {
+    min-height: var(--touch-target-min);
+    min-width: var(--touch-target-min);
+}
+
+.touch-target-comfortable {
+    min-height: var(--touch-target-comfortable);
+    min-width: var(--touch-target-comfortable);
+}
+
+/* Mobile Scrolling */
+.mobile-scroll {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+}
+
+.hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+
+/* Mobile Card */
+.mobile-card {
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--card-border));
+    border-radius: var(--mobile-radius);
+    padding: var(--mobile-padding);
+    box-shadow: var(--shadow-sm);
+}
+
+/* Tap Feedback */
+.tap-feedback {
+    transition: transform var(--duration-fast) ease, opacity var(--duration-fast) ease;
+}
+
+.tap-feedback:active {
+    transform: scale(0.97);
+    opacity: 0.8;
+}
+
+/* Floating Elements */
+.floating {
+    box-shadow: var(--shadow-lg);
+    transition: transform var(--duration-fast) ease, box-shadow var(--duration-fast) ease;
+}
+
+.floating:active {
+    transform: translateY(2px);
+    box-shadow: var(--shadow-md);
+}
+
+/* Mobile Animations */
+@keyframes slideInUp {
+    from {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideInDown {
+    from {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideInLeft {
+    from {
+        transform: translateX(-100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes scaleIn {
+    from {
+        transform: scale(0.95);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.animate-slide-in-up {
+    animation: slideInUp var(--duration-normal) ease-out;
+}
+
+.animate-slide-in-down {
+    animation: slideInDown var(--duration-normal) ease-out;
+}
+
+.animate-slide-in-left {
+    animation: slideInLeft var(--duration-normal) ease-out;
+}
+
+.animate-slide-in-right {
+    animation: slideInRight var(--duration-normal) ease-out;
+}
+
+.animate-fade-in {
+    animation: fadeIn var(--duration-normal) ease-out;
+}
+
+.animate-scale-in {
+    animation: scaleIn var(--duration-normal) ease-out;
+}
+
+/* Gradient Backgrounds */
+.gradient-gyaan {
+    background: linear-gradient(135deg, hsl(142 45% 35%) 0%, hsl(142 55% 45%) 100%);
+}
+
+.gradient-vaidya {
+    background: linear-gradient(135deg, hsl(200 45% 35%) 0%, hsl(200 55% 45%) 100%);
+}
+
+.gradient-drishti {
+    background: linear-gradient(135deg, hsl(280 45% 35%) 0%, hsl(280 55% 45%) 100%);
+}
+
+.gradient-primary {
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(142 55% 45%) 100%);
+}
+
+/* Glass Morphism */
+.glass {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.dark .glass {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Mobile Layout Utilities */
+.pb-bottom-nav {
+    padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom));
+}
+
+.pt-mobile-header {
+    padding-top: calc(var(--mobile-header-height) + env(safe-area-inset-top));
+}
+
+.h-mobile-full {
+    height: calc(100dvh - var(--bottom-nav-height) - env(safe-area-inset-bottom));
+}
+
+.mobile-container {
+    width: 100%;
+    max-width: 100%;
+    padding-left: var(--mobile-padding);
+    padding-right: var(--mobile-padding);
+}
+
+@media (min-width: 768px) {
+    .mobile-container {
+        max-width: 768px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+}

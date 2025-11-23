@@ -1,9 +1,10 @@
 import { Link, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Plus, MessageSquare, Trash2, Leaf, Edit3, Check, X, Menu } from "lucide-react";
+import { Plus, MessageSquare, Trash2, Leaf, Edit3, Check, X } from "lucide-react";
 import { useState } from "react";
 import { ProfilePopover } from "@/components/profile-popover";
 import {
+  Sidebar,
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
@@ -12,6 +13,7 @@ import {
   SidebarMenuItem,
   SidebarHeader,
   SidebarFooter,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 
@@ -24,13 +26,16 @@ import { useCredits } from "@/hooks/useCredits";
 import { CreditsDisplay } from "@/components/credits-display";
 
 
+import { ModeSelectionModal } from "@/components/ModeSelectionModal";
+
 export function AppSidebar() {
   const [location, setLocation] = useLocation();
   const { toast } = useToast();
   const { user } = useAuth();
+  const { setOpenMobile } = useSidebar();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [isModeModalOpen, setIsModeModalOpen] = useState(false);
 
   const { credits, maxCredits, refreshCredits } = useCredits();
 
@@ -94,7 +99,7 @@ export function AppSidebar() {
 
       console.log(`🚀 [createConversation] Navigating to /chat/${conversation.id}`);
       setLocation(`/chat/${conversation.id}`);
-      setIsMobileOpen(false); // Close mobile menu after creating conversation
+      setOpenMobile(false); // Close mobile menu after creating conversation
     },
     onError: (error: any) => {
       console.error("💥 [createConversation] Error handler triggered", error);
@@ -207,42 +212,12 @@ export function AppSidebar() {
 
   return (
     <>
-      {/* Mobile Menu Toggle Button */}
-      <button
-        onClick={() => setIsMobileOpen(!isMobileOpen)}
-        className="lg:hidden fixed top-4 left-4 z-[60] p-2.5 rounded-xl bg-card/95 backdrop-blur-md border border-border shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 active:scale-95"
-        aria-label="Toggle menu"
-      >
-        <Menu className="h-5 w-5 text-foreground" />
-      </button>
+      <ModeSelectionModal open={isModeModalOpen} onOpenChange={setIsModeModalOpen} />
 
-      {/* Mobile Overlay */}
-      {isMobileOpen && (
-        <div
-          className="lg:hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-[45] animate-in fade-in duration-200"
-          onClick={() => setIsMobileOpen(false)}
-        />
-      )}
-
-
-      <aside
-        className={`
-          fixed lg:relative
-          inset-y-0 left-0
-          w-64 lg:w-[--sidebar-width]
-          z-50
-          flex flex-col h-full
-          bg-sidebar/95 backdrop-blur-xl
-          text-sidebar-foreground
-          border-r border-sidebar-border
-          shadow-xl
-          transition-transform duration-300 ease-in-out
-          ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-        `}
-      >
+      <Sidebar collapsible="offcanvas">
         {/* Enhanced Header with Gradient Background */}
         <SidebarHeader className="p-4 sm:p-5 border-b border-sidebar-border/50 bg-gradient-to-br from-primary/5 via-transparent to-primary/5">
-          <Link href="/dashboard" onClick={() => setIsMobileOpen(false)}>
+          <Link href="/dashboard" onClick={() => setOpenMobile(false)}>
             <div className="flex items-center gap-3 hover-elevate rounded-xl p-3 -m-3 transition-all duration-200 hover:shadow-md group">
               <div className="p-2 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 group-hover:from-primary/30 group-hover:to-primary/20 transition-all duration-200">
                 <Leaf className="h-5 w-5 sm:h-6 sm:w-6 text-primary drop-shadow-sm" />
@@ -263,7 +238,7 @@ export function AppSidebar() {
             <div className="px-3 py-3">
               <Button
                 className="w-full gap-2 h-11 rounded-xl font-semibold shadow-md hover:shadow-lg transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary"
-                onClick={() => createConversationMutation.mutate()}
+                onClick={() => setIsModeModalOpen(true)}
                 disabled={createConversationMutation.isPending}
                 data-testid="button-new-chat"
               >
@@ -389,7 +364,7 @@ export function AppSidebar() {
                               <Link
                                 href={`/chat/${conversation.id}`}
                                 className="flex-1 min-w-0"
-                                onClick={() => setIsMobileOpen(false)}
+                                onClick={() => setOpenMobile(false)}
                               >
                                 <span className={`text-sm truncate block font-medium transition-colors ${isActive ? 'text-foreground' : 'text-foreground/80 group-hover:text-foreground'}`}>
                                   {conversation.title}
@@ -441,7 +416,7 @@ export function AppSidebar() {
         <SidebarFooter className="p-4 border-t border-sidebar-border/50 bg-gradient-to-t from-sidebar/50 to-transparent">
           <ProfilePopover />
         </SidebarFooter>
-      </aside>
+      </Sidebar>
     </>
   );
 }

@@ -1,5 +1,6 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
+import { randomUUID } from "crypto";
 import multer from "multer";
 import {
   insertConversationSchema,
@@ -770,23 +771,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/credits/deduct", verifyFirebaseToken, async (req: AuthRequest, res: Response) => {
     try {
       const userId = req.user!.uid;
-      const { type } = req.body;
+      const { type, amount: requestedAmount, mode, clientRequestId } = req.body;
 
-      if (!type || !["NEW_CHAT", "BOT_RESPONSE", "IMAGE_GENERATION"].includes(type)) {
+      if (!type) {
         return res.status(400).json({ message: "Invalid credit deduction type" });
       }
 
-      // Map type to credit amount
-      const creditAmounts = {
-        "NEW_CHAT": 2,
-        "BOT_RESPONSE": 1,
-        "IMAGE_GENERATION": 5
-      };
+      let amount = requestedAmount;
+      if (!amount) {
+        // Map type to credit amount if not explicitly provided
+        const creditAmounts: Record<string, number> = {
+          "NEW_CHAT": 2,
+          "BOT_RESPONSE": 1,
+          "IMAGE_GENERATION": 5,
+          "MODE_START": 1 // Default for Gyaan
+        };
+        amount = creditAmounts[type] || 0;
+      }
 
-      const amount = creditAmounts[type as keyof typeof creditAmounts];
+      if (amount <= 0) {
+        return res.status(400).json({ message: "Invalid amount" });
+      }
 
       try {
-        const remainingCredits = await storage.deductCredits!(userId, amount, type);
+        const remainingCredits = await storage.deductCredits!(userId, amount, type, mode, clientRequestId);
         const user = await storage.getUserCreditsDetails!(userId);
 
         res.json({
@@ -804,6 +812,234 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Deduct credits error:", error);
       res.status(500).json({ message: error.message || "Failed to deduct credits" });
+    }
+  });
+
+  // MODE START
+  app.post("/api/mode/start", verifyFirebaseToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = req.user!.uid;
+      const { mode, clientRequestId, conversationId } = req.body;
+
+      if (!['GYAAN', 'VAIDYA', 'DRISHTI'].includes(mode)) {
+        return res.status(400).json({ message: "Invalid mode" });
+      }
+
+      let cost = 0;
+      if (mode === 'GYAAN') cost = 1;
+      else if (mode === 'VAIDYA') cost = 5;
+      // DRISHTI cost is 0 here, deducted at upload start
+
+      if (cost > 0) {
+        try {
+          await storage.deductCredits!(userId, cost, 'MODE_START', mode, clientRequestId);
+        } catch (error: any) {
+          if (error.message === "Insufficient credits") {
+            return res.status(403).json({ error: "INSUFFICIENT_CREDITS" });
+          }
+          throw error;
+        }
+      }
+
+      let convId = conversationId;
+      if (!convId) {
+        const conv = await storage.createConversation({
+          userId,
+          title: mode === 'VAIDYA' ? 'Vaidya Consultation' : 'New Chat',
+        });
+        // Update mode
+        await storage.updateConversation(conv.id, { mode } as any);
+        convId = conv.id;
+      }
+
+      if (mode === 'VAIDYA') {
+        await storage.createVaidhyaSession!({
+          conversationId: convId,
+          userId,
+          status: 'collecting'
+        });
+      }
+
+      const credits = await storage.getUserCredits!(userId);
+      res.json({ conversationId: convId, mode, costCharged: cost, creditsAfter: credits });
+
+    } catch (error: any) {
+      console.error("Mode start error:", error);
+      res.status(500).json({ message: error.message || "Failed to start mode" });
+    }
+  });
+
+  // DRISHTI UPLOAD START
+  app.post("/api/drishti/upload-start", verifyFirebaseToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = req.user!.uid;
+      const { clientRequestId, fileMeta } = req.body;
+
+      // Deduct 10 credits
+      try {
+        await storage.deductCredits!(userId, 10, 'IMAGE_GENERATION', 'DRISHTI', clientRequestId);
+      } catch (error: any) {
+        if (error.message === "Insufficient credits") {
+          return res.status(403).json({ error: "INSUFFICIENT_CREDITS" });
+        }
+        throw error;
+      }
+
+      const analysisId = randomUUID();
+      await storage.createDrishtiAnalysis!({
+        userId,
+        analysisId,
+        clientRequestId,
+        status: 'reserved'
+      });
+
+      // In a real app, generate signed URL here. For now, return a dummy upload URL or just success
+      // We'll simulate direct upload to server for this demo
+      res.json({
+        uploadUrl: `/api/drishti/upload/${analysisId}`, // Placeholder
+        analysisId
+      });
+
+    } catch (error: any) {
+      console.error("Drishti upload start error:", error);
+      res.status(500).json({ message: error.message || "Failed to start upload" });
+    }
+  });
+
+  // DRISHTI UPLOAD COMPLETE
+  app.post("/api/drishti/upload-complete", verifyFirebaseToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = req.user!.uid;
+      const { analysisId, clientRequestId, storagePath } = req.body;
+
+      const analysis = await storage.getDrishtiAnalysis!(analysisId);
+      if (!analysis || analysis.userId !== userId) {
+        return res.status(404).json({ message: "Analysis not found" });
+      }
+
+      await storage.updateDrishtiAnalysis!(analysisId, {
+        status: 'uploaded',
+        storagePath,
+        updatedAt: new Date()
+      });
+
+      // Trigger async analysis (simulated)
+      setTimeout(async () => {
+        try {
+          // Simulate processing
+          await storage.updateDrishtiAnalysis!(analysisId, { status: 'processing' });
+
+          // Simulate success or failure based on some condition or random
+          // For demo, we'll assume success unless specifically flagged
+          const success = true;
+
+          if (success) {
+            await storage.updateDrishtiAnalysis!(analysisId, {
+              status: 'completed',
+              visualReport: {
+                summary: "Analysis complete. Detected Vata imbalance indicators.",
+                details: "Dry skin texture observed. Irregular patterns."
+              }
+            });
+          } else {
+            throw new Error("Analysis failed");
+          }
+        } catch (err) {
+          console.error("Analysis job failed:", err);
+          // Refund
+          await storage.refundCredits!(userId, 10, 'REFUND', clientRequestId);
+          await storage.updateDrishtiAnalysis!(analysisId, { status: 'failed', refundLogId: 'refunded' });
+        }
+      }, 2000);
+
+      res.status(202).json({ analysisId, status: 'uploaded' });
+
+    } catch (error: any) {
+      console.error("Drishti upload complete error:", error);
+      res.status(500).json({ message: error.message || "Failed to complete upload" });
+    }
+  });
+
+  // VAIDYA CHAT
+  app.post("/api/chat/agentic", verifyFirebaseToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = req.user!.uid;
+      const { conversationId, message, clientRequestId } = req.body;
+
+      const session = await storage.getVaidhyaSession!(conversationId);
+      if (!session) {
+        return res.status(404).json({ message: "Vaidya session not found" });
+      }
+
+      // Persist user message
+      await storage.createMessage({
+        conversationId,
+        role: 'user',
+        content: message,
+        id: clientRequestId
+      });
+
+      // Update session with answer
+      const questions = session.questionsAsked || [];
+      const lastQuestion = questions.length > 0 ? questions[questions.length - 1] : "Initial";
+
+      const newAnswers = [...(session.answers || []), { question: lastQuestion, answer: message }];
+
+      // Logic to determine next question or diagnosis
+      // This is simplified. In real app, Gemini would decide.
+      let nextResponse = "";
+      let newStatus = session.status;
+
+      if (newAnswers.length < 3) {
+        nextResponse = "Tell me more about your sleep patterns.";
+        await storage.updateVaidhyaSession!(conversationId, {
+          answers: newAnswers,
+          questionsAsked: [...questions, nextResponse]
+        });
+      } else {
+        newStatus = 'diagnosed';
+        nextResponse = "Based on your answers, you seem to have a Pitta imbalance. I recommend cooling foods.";
+        await storage.updateVaidhyaSession!(conversationId, {
+          answers: newAnswers,
+          status: newStatus
+        });
+      }
+
+      // Persist bot message
+      await storage.createMessage({
+        conversationId,
+        role: 'assistant',
+        content: nextResponse
+      });
+
+      // Deduct 1 credit for response
+      try {
+        await storage.deductCredits!(userId, 1, 'BOT_RESPONSE', 'VAIDYA', clientRequestId);
+      } catch (error) {
+        // Log error but don't fail the chat flow if possible, or handle gracefully
+        console.error("Failed to deduct chat credit", error);
+      }
+
+      res.json({ response: nextResponse, status: newStatus });
+
+    } catch (error: any) {
+      console.error("Vaidya chat error:", error);
+      res.status(500).json({ message: error.message || "Failed to process chat" });
+    }
+  });
+
+  // REFUND
+  app.post("/api/credits/refund", verifyFirebaseToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = req.user!.uid;
+      const { amount, reason, clientRequestId } = req.body;
+
+      const newCredits = await storage.refundCredits!(userId, amount, reason, clientRequestId);
+      res.json({ success: true, credits: newCredits });
+
+    } catch (error: any) {
+      console.error("Refund error:", error);
+      res.status(500).json({ message: error.message || "Failed to refund" });
     }
   });
 

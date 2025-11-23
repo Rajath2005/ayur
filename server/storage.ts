@@ -34,8 +34,9 @@ export interface IStorage {
   // Credits
   getUserCredits?(uid: string): Promise<number>;
   getUserCreditsDetails?(uid: string): Promise<{ totalCredits: number; cycleStart: Date; cycleEnd: Date } | null>;
-  deductCredits?(uid: string, amount: number, reason: string): Promise<number>;
-  logCreditUsage?(uid: string, deducted: number, reason: string, before?: number, after?: number): Promise<void>;
+  deductCredits?(uid: string, amount: number, reason: string, mode?: string, clientRequestId?: string): Promise<number>;
+  logCreditUsage?(uid: string, deducted: number, reason: string, before?: number, after?: number, mode?: string, clientRequestId?: string): Promise<void>;
+  refundCredits?(uid: string, amount: number, reason: string, clientRequestId?: string): Promise<number>;
   resetCreditsForUser?(uid: string, newCredits?: number): Promise<void>;
   resetCreditsForAllUsers?(newCredits?: number): Promise<void>;
   getCreditLogs?(uid: string, limit?: number): Promise<any[]>;
@@ -47,6 +48,16 @@ export interface IStorage {
   // User Settings
   getUserSettings?(userId: string): Promise<any | null>;
   updateUserSettings?(userId: string, data: any): Promise<any>;
+
+  // Vaidhya Session
+  createVaidhyaSession?(session: any): Promise<any>;
+  getVaidhyaSession?(conversationId: string): Promise<any>;
+  updateVaidhyaSession?(conversationId: string, updates: any): Promise<any>;
+
+  // Drishti Analysis
+  createDrishtiAnalysis?(analysis: any): Promise<any>;
+  getDrishtiAnalysis?(analysisId: string): Promise<any>;
+  updateDrishtiAnalysis?(analysisId: string, updates: any): Promise<any>;
 }
 
 // In-memory storage implementation

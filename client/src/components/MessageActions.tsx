@@ -25,7 +25,7 @@ export function MessageActions({
     onDelete,
 }: MessageActionsProps) {
     return (
-        <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 absolute -bottom-8 left-0 flex gap-1 bg-background/95 backdrop-blur-sm border rounded-lg shadow-md p-1">
+        <div className="flex gap-1 bg-background/95 backdrop-blur-sm border rounded-lg shadow-md p-1 transition-opacity duration-200 opacity-100 md:opacity-0 md:group-hover:opacity-100 relative mt-2 md:absolute md:-bottom-8 md:left-0 md:mt-0">
             <TooltipProvider delayDuration={300}>
                 <Tooltip>
                     <TooltipTrigger asChild>

@@ -14,15 +14,16 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Conversation } from "@shared/schema";
 import "../dashboard-premium.css";
 
+import { ModeSelectionModal } from "@/components/ModeSelectionModal";
+
 export default function Dashboard() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const [isModeModalOpen, setIsModeModalOpen] = useState(false);
   const { data: conversations = [] } = useQuery<Conversation[]>({
     queryKey: ["/api/conversations"],
   });
-
-
 
   const createConversationMutation = useMutation<Conversation, Error, void>({
     mutationFn: async () => {
@@ -128,11 +129,10 @@ export default function Dashboard() {
                       <Button
                         size="lg"
                         className="flex-1 gap-2 h-14 text-base btn-glow shadow-md hover:shadow-lg transition-all"
-                        onClick={() => createConversationMutation.mutate()}
-                        disabled={createConversationMutation.isPending}
+                        onClick={() => setIsModeModalOpen(true)}
                       >
                         <MessageSquare className="h-5 w-5" />
-                        Start Chat
+                        Start New Consultation
                       </Button>
                       <Button
                         size="lg"
@@ -142,12 +142,14 @@ export default function Dashboard() {
                         disabled={createImageChatSessionMutation.isPending}
                       >
                         <Camera className="h-5 w-5" />
-                        Upload Image
+                        Legacy Image Chat
                       </Button>
                     </div>
                   </div>
                 </CardContent>
               </Card>
+
+              <ModeSelectionModal open={isModeModalOpen} onOpenChange={setIsModeModalOpen} />
 
               {/* Recent Activity / Continue Chat */}
               <Card className="card-premium animate-slide-up animate-delay-100">
