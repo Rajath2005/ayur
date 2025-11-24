@@ -19,7 +19,6 @@ const Preloader = () => {
     return (
         <div className="preloaderBg" id="preloader">
             <div className="preloader-container">
-                <div className="spinner-ring"></div>
                 <div className="preloader-image-wrapper">
                     <img
                         src={preloaderImage}
