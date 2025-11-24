@@ -273,9 +273,16 @@ export default function Landing() {
                 © 2025 AyuDost AI. Empowering wellness naturally.
               </span>
             </div>
-            <p className="text-sm text-muted-foreground">
-              AI-powered Ayurvedic guidance for your holistic health journey
-            </p>
+            <div className="flex items-center gap-4">
+              <Link href="/privacy-policy">
+                <span className="text-sm text-muted-foreground hover:text-primary transition-colors cursor-pointer">
+                  Privacy & Cookies
+                </span>
+              </Link>
+              <p className="text-sm text-muted-foreground">
+                AI-powered Ayurvedic guidance for your holistic health journey
+              </p>
+            </div>
           </div>
           <div className="mt-4 pt-4 border-t">
             <p className="text-xs text-muted-foreground text-center">

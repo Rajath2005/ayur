@@ -11,14 +11,17 @@ import Login from "@/pages/login";
 import Register from "@/pages/register";
 import Dashboard from "@/pages/dashboard";
 import ChatPage from "@/pages/chat";
-import ImageChatPage from "@/pages/ImageChat";
 import DrishtiPage from "@/pages/drishti";
 import ProfilePage from "@/pages/profile";
 import SettingsPage from "@/pages/settings";
 import ConversationsPage from "@/pages/conversations";
 import SubscriptionPage from "@/pages/subscription";
+import PrivacyPolicyPage from "@/pages/privacy-policy";
 import NotFound from "@/pages/not-found";
 import { MobileAppLayout } from "@/components/layouts/MobileAppLayout";
+import Preloader from "./preloader/Preloader";
+import { CookieConsentProvider } from "@/contexts/CookieConsentContext";
+import { CookieConsentBanner } from "@/components/CookieConsentBanner";
 
 function Router() {
   return (
@@ -26,6 +29,7 @@ function Router() {
       <Route path="/" component={Landing} />
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
+      <Route path="/privacy-policy" component={PrivacyPolicyPage} />
       <Route path="/dashboard">
         <ProtectedRoute>
           <Dashboard />
@@ -34,11 +38,6 @@ function Router() {
       <Route path="/chat/:id">
         <ProtectedRoute>
           <ChatPage />
-        </ProtectedRoute>
-      </Route>
-      <Route path="/image-chat/:id">
-        <ProtectedRoute>
-          <ImageChatPage />
         </ProtectedRoute>
       </Route>
       <Route path="/drishti-upload">
@@ -71,21 +70,22 @@ function Router() {
   );
 }
 
-import Preloader from "./preloader/Preloader";
-
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <ThemeProvider defaultTheme="light">
-          <TooltipProvider>
-            <Preloader />
-            <Toaster />
-            <MobileAppLayout>
-              <Router />
-            </MobileAppLayout>
-          </TooltipProvider>
-        </ThemeProvider>
+        <CookieConsentProvider>
+          <ThemeProvider defaultTheme="light">
+            <TooltipProvider>
+              <Preloader />
+              <Toaster />
+              <CookieConsentBanner />
+              <MobileAppLayout>
+                <Router />
+              </MobileAppLayout>
+            </TooltipProvider>
+          </ThemeProvider>
+        </CookieConsentProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

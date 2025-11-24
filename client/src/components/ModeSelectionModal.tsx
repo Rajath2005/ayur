@@ -105,7 +105,7 @@ export function ModeSelectionModal({ open, onOpenChange }: ModeSelectionModalPro
                                     <li>• General queries & tips</li>
                                 </ul>
                                 <Button
-                                    className="w-full touch-target"
+                                    className="w-full touch-target hover:bg-primary hover:text-primary-foreground transition-colors"
                                     variant="outline"
                                     disabled={startModeMutation.isPending}
                                     onClick={(e) => {
@@ -142,7 +142,8 @@ export function ModeSelectionModal({ open, onOpenChange }: ModeSelectionModalPro
                                     <li>• Personalized report</li>
                                 </ul>
                                 <Button
-                                    className="w-full touch-target"
+                                    className="w-full touch-target hover:bg-primary hover:text-primary-foreground transition-colors"
+                                    variant="outline"
                                     disabled={startModeMutation.isPending}
                                     onClick={(e) => {
                                         e.stopPropagation();
@@ -178,7 +179,7 @@ export function ModeSelectionModal({ open, onOpenChange }: ModeSelectionModalPro
                                     <li>• Visual health report</li>
                                 </ul>
                                 <Button
-                                    className="w-full touch-target"
+                                    className="w-full touch-target hover:bg-primary hover:text-primary-foreground transition-colors"
                                     variant="outline"
                                     disabled={startModeMutation.isPending}
                                     onClick={(e) => {

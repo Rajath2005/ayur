@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRoute } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Send, Loader2, Edit2, MessageSquare, Clock, Coins } from "lucide-react";
+import { Send, Loader2, Edit2, MessageSquare, Clock, Coins, Stethoscope } from "lucide-react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -14,7 +14,7 @@ import { UserDashboard } from "@/components/user-dashboard";
 import { MessageBubble } from "@/components/MessageBubble";
 import { TypingIndicator } from "@/components/TypingIndicator";
 import { ScrollToBottom } from "@/components/ScrollToBottom";
-import { ConversationToolbar } from "@/components/ConversationToolbar";
+
 import { useAuth } from "@/contexts/AuthContext";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -212,22 +212,7 @@ export default function ChatPage() {
     sendMessageMutation.mutate(messageContent);
   };
 
-  const exportConversation = () => {
-    const content = messages.map(m => `${m.role.toUpperCase()}: ${m.content}`).join('\n\n');
-    const blob = new Blob([content], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `ayur-chat-${conversation?.title || 'conversation'}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast({ title: "Conversation exported" });
-  };
 
-  const printConversation = () => {
-    window.print();
-    toast({ title: "Opening print dialog..." });
-  };
 
   const handleTitleEdit = async () => {
     if (!editedTitle.trim() || editedTitle === conversation?.title) {
@@ -308,13 +293,15 @@ export default function ChatPage() {
     ? formatDistanceToNow(new Date(conversation.updatedAt), { addSuffix: true })
     : null;
 
+  const isVaidyaMode = conversation?.mode === 'VAIDYA';
+
   return (
     <SidebarProvider style={sidebarStyle}>
       <div className="flex h-screen w-full">
         <AppSidebar />
         <div className="flex flex-col flex-1">
           {/* Header */}
-          <header className="flex items-center justify-between p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <header className={`flex items-center justify-between p-4 border-b backdrop-blur supports-[backdrop-filter]:bg-background/60 ${isVaidyaMode ? 'bg-emerald-950/10 border-emerald-900/20' : 'bg-background/95'}`}>
             <div className="flex items-center gap-4 flex-1">
               <SidebarTrigger data-testid="button-sidebar-toggle" />
               <div className="flex-1">
@@ -335,11 +322,12 @@ export default function ChatPage() {
                 ) : (
                   <div className="flex items-center gap-2">
                     <h2
-                      className="font-semibold cursor-pointer hover:text-primary transition-colors"
+                      className="font-semibold cursor-pointer hover:text-primary transition-colors flex items-center gap-2"
                       data-testid="text-conversation-title"
                       onClick={() => setIsEditingTitle(true)}
                     >
-                      {conversation?.title || "New Conversation"}
+                      {isVaidyaMode && <Stethoscope className="h-4 w-4 text-emerald-600" />}
+                      {conversation?.title || (isVaidyaMode ? "Vaidya Diagnostic Session" : "New Conversation")}
                     </h2>
                     <Button
                       variant="ghost"
@@ -370,54 +358,74 @@ export default function ChatPage() {
               </div>
             </div>
             <div className="flex items-center gap-4">
-
+              {isVaidyaMode && (
+                <Badge variant="outline" className="border-emerald-600/30 text-emerald-600 bg-emerald-50/50 hidden sm:flex">
+                  Medical Mode
+                </Badge>
+              )}
               <ThemeToggle />
             </div>
           </header>
           <UserDashboard open={isUserDashboardOpen} onOpenChange={setIsUserDashboardOpen} />
 
-          {/* Conversation Toolbar */}
-          <ConversationToolbar
-            onExport={exportConversation}
-            onClear={() => {
-              if (confirm("Clear all messages?")) {
-                toast({ title: "Feature coming soon" });
-              }
-            }}
-            onPrint={printConversation}
-            disabled={messages.length === 0}
-          />
+
 
           {/* Messages Area */}
           <ScrollArea className="flex-1 smooth-scroll" ref={scrollRef}>
             <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+              {isVaidyaMode && (
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-4 mb-6 text-sm text-emerald-800 dark:bg-emerald-950/30 dark:border-emerald-800 dark:text-emerald-200">
+                  <div className="flex items-start gap-3">
+                    <Stethoscope className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="font-medium">Vaidya Diagnostic Mode</p>
+                      <p className="opacity-90 mt-1">
+                        I will ask you a series of questions to understand your symptoms. Please answer as accurately as possible.
+                        <br />
+                        <span className="font-semibold">Disclaimer:</span> This is an AI simulation and not a substitute for professional medical advice.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {isLoading ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
               ) : messages.length === 0 ? (
                 <div className="text-center py-12 animate-fade-in">
-                  <div className="inline-flex items-center justify-center h-16 w-16 rounded-full bg-primary/10 mb-4">
-                    <svg className="h-8 w-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                    </svg>
+                  <div className={`inline-flex items-center justify-center h-16 w-16 rounded-full mb-4 ${isVaidyaMode ? 'bg-emerald-100 text-emerald-600' : 'bg-primary/10 text-primary'}`}>
+                    {isVaidyaMode ? (
+                      <Stethoscope className="h-8 w-8" />
+                    ) : (
+                      <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                      </svg>
+                    )}
                   </div>
-                  <h3 className="text-lg font-semibold mb-2">Start Your Wellness Journey</h3>
+                  <h3 className="text-lg font-semibold mb-2">
+                    {isVaidyaMode ? "Start Diagnostic Session" : "Start Your Wellness Journey"}
+                  </h3>
                   <p className="text-muted-foreground max-w-md mx-auto mb-6">
-                    Ask me anything about Ayurvedic practices, natural remedies, or your health concerns.
+                    {isVaidyaMode
+                      ? "Describe your symptoms in detail. I will guide you through a diagnostic process."
+                      : "Ask me anything about Ayurvedic practices, natural remedies, or your health concerns."}
                   </p>
-                  <div className="flex flex-wrap gap-2 justify-center max-w-2xl mx-auto">
-                    {quickSuggestions.map((suggestion) => (
-                      <Badge
-                        key={suggestion}
-                        variant="secondary"
-                        className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors px-3 py-1"
-                        onClick={() => setMessage(suggestion)}
-                      >
-                        {suggestion}
-                      </Badge>
-                    ))}
-                  </div>
+                  {!isVaidyaMode && (
+                    <div className="flex flex-wrap gap-2 justify-center max-w-2xl mx-auto">
+                      {quickSuggestions.map((suggestion) => (
+                        <Badge
+                          key={suggestion}
+                          variant="secondary"
+                          className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors px-3 py-1"
+                          onClick={() => setMessage(suggestion)}
+                        >
+                          {suggestion}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <>

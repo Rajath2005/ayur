@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { MessageSquare, Camera, ArrowRight, Clock, Sparkles } from "lucide-react";
+import { MessageSquare, Camera, ArrowRight, Clock, Sparkles, Stethoscope, Eye, Loader2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
+import { v4 as uuidv4 } from 'uuid';
 
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
@@ -14,56 +15,60 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Conversation } from "@shared/schema";
 import "../dashboard-premium.css";
 
-import { ModeSelectionModal } from "@/components/ModeSelectionModal";
-
 export default function Dashboard() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [isModeModalOpen, setIsModeModalOpen] = useState(false);
+  const [selectedMode, setSelectedMode] = useState<'GYAAN' | 'VAIDYA' | 'DRISHTI' | null>(null);
+
   const { data: conversations = [] } = useQuery<Conversation[]>({
     queryKey: ["/api/conversations"],
   });
 
-  const createConversationMutation = useMutation<Conversation, Error, void>({
-    mutationFn: async () => {
-      const result = await apiRequest("POST", "/api/conversations", {
-        title: "New Conversation",
+  const startModeMutation = useMutation({
+    mutationFn: async (mode: 'GYAAN' | 'VAIDYA' | 'DRISHTI') => {
+      const clientRequestId = uuidv4();
+
+      if (mode === 'DRISHTI') {
+        return { mode, conversationId: 'new-drishti' };
+      }
+
+      const res = await apiRequest("POST", "/api/mode/start", {
+        mode,
+        clientRequestId
       });
-      return result.json();
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || error.error || "Failed to start mode");
+      }
+
+      return res.json();
     },
-    onSuccess: (newConversation: Conversation) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
-      setLocation(`/chat/${newConversation.id}`);
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["user", "credits"] });
+      queryClient.invalidateQueries({ queryKey: ["conversations"] });
+
+      if (data.mode === 'DRISHTI') {
+        setLocation(`/drishti-upload`);
+      } else {
+        setLocation(`/chat/${data.conversationId}`);
+      }
     },
-    onError: () => {
+    onError: (error: Error) => {
       toast({
-        title: "Error",
-        description: "Could not create conversation",
+        title: "Error starting mode",
+        description: error.message,
         variant: "destructive",
       });
-    },
+      setSelectedMode(null);
+    }
   });
 
-  const createImageChatSessionMutation = useMutation<Conversation, Error, void>({
-    mutationFn: async () => {
-      const result = await apiRequest("POST", "/api/image-chat-sessions", {
-        title: "Image Analysis Session",
-      });
-      return result.json();
-    },
-    onSuccess: (newSession: Conversation) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
-      setLocation(`/image-chat/${newSession.id}`);
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Could not create image chat session",
-        variant: "destructive",
-      });
-    },
-  });
+  const handleModeSelect = (mode: 'GYAAN' | 'VAIDYA' | 'DRISHTI') => {
+    setSelectedMode(mode);
+    startModeMutation.mutate(mode);
+  };
 
   const latestConversation = conversations[0];
   const totalImages = 0;
@@ -120,36 +125,122 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* Primary CTA Card with Enhanced Styling */}
-              <Card className="border-2 border-primary/20 card-premium animate-slide-up">
-                <CardContent className="p-8">
-                  <div className="text-center space-y-6">
-                    <h2 className="text-2xl font-semibold tracking-tight">How can I help you today?</h2>
-                    <div className="flex flex-col sm:flex-row gap-4 max-w-2xl mx-auto">
-                      <Button
-                        size="lg"
-                        className="flex-1 gap-2 h-14 text-base btn-glow shadow-md hover:shadow-lg transition-all"
-                        onClick={() => setIsModeModalOpen(true)}
-                      >
-                        <MessageSquare className="h-5 w-5" />
-                        Start New Consultation
-                      </Button>
-                      <Button
-                        size="lg"
-                        variant="outline"
-                        className="flex-1 gap-2 h-14 text-base border-2 hover:border-primary/50 hover:bg-primary/5 transition-all shadow-sm hover:shadow-md"
-                        onClick={() => createImageChatSessionMutation.mutate()}
-                        disabled={createImageChatSessionMutation.isPending}
-                      >
-                        <Camera className="h-5 w-5" />
-                        Legacy Image Chat
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              {/* Primary CTA Section */}
+              <div className="space-y-6">
+                <div className="text-center space-y-2">
+                  <h2 className="text-2xl font-semibold tracking-tight">Select how you want to interact with Ayurveda today</h2>
+                </div>
 
-              <ModeSelectionModal open={isModeModalOpen} onOpenChange={setIsModeModalOpen} />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* Card A: Ayurveda Gyaan */}
+                  <Card
+                    className={`cursor-pointer hover:border-primary transition-all hover:shadow-md card-premium ${selectedMode === 'GYAAN' ? 'border-primary shadow-md' : ''}`}
+                    onClick={() => handleModeSelect('GYAAN')}
+                  >
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex items-center gap-2 text-lg">
+                        <MessageSquare className="h-5 w-5 text-primary flex-shrink-0" />
+                        <span>Ayurveda Gyaan</span>
+                      </CardTitle>
+                      <CardDescription>General Wellness Chat</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <ul className="text-sm space-y-2 text-muted-foreground">
+                        <li>• 1 Credit to start</li>
+                        <li>• 1 Credit per response</li>
+                        <li>• General queries & tips</li>
+                      </ul>
+                      <Button
+                        className="w-full hover:bg-primary hover:text-primary-foreground transition-colors"
+                        variant="outline"
+                        disabled={startModeMutation.isPending}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleModeSelect('GYAAN');
+                        }}
+                      >
+                        {startModeMutation.isPending && selectedMode === 'GYAAN' ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          "Start (1 Credit)"
+                        )}
+                      </Button>
+                    </CardContent>
+                  </Card>
+
+                  {/* Card B: Vaidya Chat */}
+                  <Card
+                    className={`cursor-pointer hover:border-primary transition-all hover:shadow-md card-premium border-primary/20 bg-primary/5 ${selectedMode === 'VAIDYA' ? 'border-primary shadow-md' : ''}`}
+                    onClick={() => handleModeSelect('VAIDYA')}
+                  >
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex items-center gap-2 text-lg">
+                        <Stethoscope className="h-5 w-5 text-primary flex-shrink-0" />
+                        <span>Vaidya Chat</span>
+                      </CardTitle>
+                      <CardDescription>Diagnostic Consultation</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <ul className="text-sm space-y-2 text-muted-foreground">
+                        <li>• 5 Credits to start</li>
+                        <li>• Deep diagnostic loop</li>
+                        <li>• Personalized report</li>
+                      </ul>
+                      <Button
+                        className="w-full hover:bg-primary hover:text-primary-foreground transition-colors"
+                        variant="outline"
+                        disabled={startModeMutation.isPending}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleModeSelect('VAIDYA');
+                        }}
+                      >
+                        {startModeMutation.isPending && selectedMode === 'VAIDYA' ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          "Start (5 Credits)"
+                        )}
+                      </Button>
+                    </CardContent>
+                  </Card>
+
+                  {/* Card C: Drishti AI */}
+                  <Card
+                    className={`cursor-pointer hover:border-primary transition-all hover:shadow-md card-premium ${selectedMode === 'DRISHTI' ? 'border-primary shadow-md' : ''}`}
+                    onClick={() => handleModeSelect('DRISHTI')}
+                  >
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex items-center gap-2 text-lg">
+                        <Eye className="h-5 w-5 text-primary flex-shrink-0" />
+                        <span>Drishti AI</span>
+                      </CardTitle>
+                      <CardDescription>Visual Analysis</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <ul className="text-sm space-y-2 text-muted-foreground">
+                        <li>• 10 Credits on upload</li>
+                        <li>• Tongue/Face analysis</li>
+                        <li>• Visual health report</li>
+                      </ul>
+                      <Button
+                        className="w-full hover:bg-primary hover:text-primary-foreground transition-colors"
+                        variant="outline"
+                        disabled={startModeMutation.isPending}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleModeSelect('DRISHTI');
+                        }}
+                      >
+                        {startModeMutation.isPending && selectedMode === 'DRISHTI' ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          "Start (10 Credits)"
+                        )}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
 
               {/* Recent Activity / Continue Chat */}
               <Card className="card-premium animate-slide-up animate-delay-100">
@@ -212,8 +303,8 @@ export default function Dashboard() {
               </div>
             </div>
           </main>
-        </div>
-      </div>
-    </SidebarProvider>
+        </div >
+      </div >
+    </SidebarProvider >
   );
 }

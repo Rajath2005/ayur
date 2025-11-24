@@ -2,15 +2,13 @@ import { useState } from "react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { DrishtiUpload } from "@/components/DrishtiUpload";
-import { Card, CardContent } from "@/components/ui/card";
+import ImageDetection from "@/components/ImageDetection";
 import { Eye, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 
 export default function DrishtiPage() {
     const [, setLocation] = useLocation();
-    const [analysisId, setAnalysisId] = useState<string | null>(null);
 
     const sidebarStyle = {
         "--sidebar-width": "20rem",
@@ -31,7 +29,7 @@ export default function DrishtiPage() {
                                 </Button>
                                 <h1 className="text-lg font-semibold flex items-center gap-2">
                                     <Eye className="h-5 w-5 text-primary" />
-                                    Drishti AI Analysis
+                                    Drishti AI - Visual Analysis
                                 </h1>
                             </div>
                         </div>
@@ -39,7 +37,7 @@ export default function DrishtiPage() {
                     </header>
 
                     <main className="flex-1 overflow-auto p-6 md:p-8">
-                        <div className="max-w-4xl mx-auto space-y-8">
+                        <div className="max-w-6xl mx-auto space-y-8">
                             <div className="text-center space-y-2">
                                 <h2 className="text-3xl font-bold tracking-tight">Visual Health Assessment</h2>
                                 <p className="text-muted-foreground max-w-2xl mx-auto">
@@ -48,12 +46,7 @@ export default function DrishtiPage() {
                                 </p>
                             </div>
 
-                            <DrishtiUpload
-                                onAnalysisComplete={(id, report) => {
-                                    setAnalysisId(id);
-                                    // Optional: Could redirect to a dedicated report page or just show inline
-                                }}
-                            />
+                            <ImageDetection />
                         </div>
                     </main>
                 </div>

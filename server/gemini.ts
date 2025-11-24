@@ -151,31 +151,58 @@ async function generate(prompt: string): Promise<string> {
 
 export async function getChatResponse(
   userMessage: string,
-  conversationHistory: Array<{ role: string; content: string }> = []
+  conversationHistory: Array<{ role: string; content: string }> = [],
+  mode: 'GYAAN' | 'VAIDYA' | 'DRISHTI' | 'LEGACY' = 'GYAAN'
 ): Promise<ChatResponse> {
   console.log("\n💬 Processing chat request:");
+  console.log(`  Mode: ${mode}`);
   console.log(`  User message: ${userMessage.substring(0, 50)}...`);
   console.log(`  History length: ${conversationHistory.length} messages`);
 
   // Build conversation context
   const historyContext = conversationHistory
-    .slice(-5) // Only include last 5 messages
+    .slice(-10) // Include more context for diagnostic flow
     .map((m) => `${m.role === "user" ? "User" : "Assistant"}: ${m.content}`)
     .join("\n\n");
 
-  const prompt = `You are AyuDost AI, an Ayurvedic wellness \& lifestyle assistant.
+  let systemPrompt = "";
+
+  if (mode === 'VAIDYA') {
+    systemPrompt = `You are Vaidya Chat, an advanced AI Ayurvedic Practitioner. Your goal is to conduct a thorough diagnostic consultation with the user to identify potential health imbalances (Vikriti) and suggest Ayurvedic remedies.
+
+PROTOCOL:
+1. **Symptom Gathering**: Ask specific, targeted questions to understand the user's symptoms, duration, severity, and associated factors (diet, sleep, stress). Do NOT ask all questions at once. Ask 1-2 relevant questions at a time to keep the conversation natural.
+2. **Dosha Analysis**: Try to determine the user's dominant Dosha (Vata, Pitta, Kapha) based on their answers.
+3. **Diagnosis & Remedy**: Once you have sufficient information (usually after 3-5 exchanges), provide a detailed analysis including:
+   - Potential Dosha imbalance.
+   - Suggested lifestyle changes (Dinacharya).
+   - Dietary recommendations (Pathya/Apathya).
+   - Simple herbal remedies.
+4. **Tone**: Be professional, empathetic, and authoritative yet caring, like a wise Ayurvedic doctor.
+
+IMPORTANT:
+- If the user mentions severe symptoms (chest pain, difficulty breathing, etc.), IMMEDIATELY advise them to see a doctor and do not attempt to diagnose.
+- Always maintain the persona of a Vaidya (Ayurvedic Doctor).
+- Keep responses concise during the questioning phase.
+
+DISCLAIMER: Always imply or state that this is an AI analysis and not a substitute for professional medical advice.`;
+  } else {
+    systemPrompt = `You are AyuDost AI, an Ayurvedic wellness & lifestyle assistant.
 You provide safe, general guidance based on Ayurvedic principles.
 You never provide medical diagnosis or replace professional medical advice.
+Your tone is friendly, encouraging, and holistic.`;
+  }
 
-${historyContext ? `Previous conversation:\n${historyContext}\n\n` : ""}Current question:
+  const prompt = `${systemPrompt}
+
+${historyContext ? `Previous conversation:\n${historyContext}\n\n` : ""}Current interaction:
 User: ${userMessage}
 
-Please provide a helpful, compassionate response based on Ayurvedic wellness principles:`;
+Please provide a response following the protocol above:`;
 
   const response = await generate(prompt);
 
   return {
     content: response,
-
   };
 }

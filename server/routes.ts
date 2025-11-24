@@ -379,7 +379,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }));
 
       // 3. Get AI response
-      const aiResponse = await getChatResponse(content, conversationHistory);
+      const aiResponse = await getChatResponse(
+        content,
+        conversationHistory,
+        conversation.mode || 'GYAAN'
+      );
 
       // Deduct credits only after successful AI response
       // Use atomic deduction here
@@ -1052,6 +1056,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Reset credits error:", error);
       res.status(500).json({ message: error.message || "Failed to reset credits" });
+    }
+  });
+
+  // COOKIE CONSENT ROUTES
+  app.post("/api/cookies/save-preferences", async (req: Request, res: Response) => {
+    try {
+      const { userId, deviceId, preferences, acceptedAll } = req.body;
+
+      if (!deviceId) {
+        return res.status(400).json({ message: "deviceId is required" });
+      }
+
+      if (!preferences || typeof preferences !== 'object') {
+        return res.status(400).json({ message: "preferences object is required" });
+      }
+
+      // Check if storage method is available
+      if (!storage.saveCookieConsent) {
+        return res.status(501).json({
+          message: "Cookie consent not supported. MongoDB may not be configured."
+        });
+      }
+
+      const consentData = {
+        userId: userId || null,
+        deviceId,
+        preferences: {
+          essential: true, // Always true
+          analytics: preferences.analytics ?? false,
+          personalization: preferences.personalization ?? false,
+          ai_logs: preferences.ai_logs ?? false,
+        },
+        acceptedAll: acceptedAll ?? false,
+      };
+
+      console.log('[Cookie Consent] Saving preferences:', consentData);
+      const savedConsent = await storage.saveCookieConsent(consentData);
+      console.log('[Cookie Consent] Success:', savedConsent);
+
+      res.json({
+        success: true,
+        consent: savedConsent,
+      });
+    } catch (error: any) {
+      console.error("Save cookie consent error:", error);
+      res.status(500).json({ message: error.message || "Failed to save cookie preferences" });
+    }
+  });
+
+  app.get("/api/cookies/status", async (req: Request, res: Response) => {
+    try {
+      const { userId, deviceId } = req.query;
+
+      if (!deviceId) {
+        return res.status(400).json({ message: "deviceId is required" });
+      }
+
+      // Check if storage method is available
+      if (!storage.getCookieConsent) {
+        return res.status(501).json({
+          message: "Cookie consent not supported. MongoDB may not be configured."
+        });
+      }
+
+      const consent = await storage.getCookieConsent(
+        userId as string || null,
+        deviceId as string
+      );
+
+      if (!consent) {
+        return res.json({
+          success: true,
+          hasConsent: false,
+          consent: null,
+        });
+      }
+
+      res.json({
+        success: true,
+        hasConsent: true,
+        consent,
+      });
+    } catch (error: any) {
+      console.error("Get cookie consent status error:", error);
+      res.status(500).json({ message: error.message || "Failed to get cookie consent status" });
     }
   });
 

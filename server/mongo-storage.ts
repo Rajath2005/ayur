@@ -714,4 +714,108 @@ export class MongoStorage implements IStorage {
       throw error;
     }
   }
+
+  // Cookie Consent methods
+  async saveCookieConsent(data: {
+    userId: string | null;
+    deviceId: string;
+    preferences: {
+      essential: boolean;
+      analytics: boolean;
+      personalization: boolean;
+      ai_logs: boolean;
+    };
+    acceptedAll: boolean;
+  }): Promise<any> {
+    try {
+      const { CookieConsent } = await import('./models/CookieConsent');
+      const now = new Date();
+
+      // Find existing consent by userId or deviceId
+      const query = data.userId
+        ? { userId: data.userId }
+        : { deviceId: data.deviceId, userId: null };
+
+      const consent = await CookieConsent.findOneAndUpdate(
+        query,
+        {
+          $set: {
+            userId: data.userId,
+            deviceId: data.deviceId,
+            preferences: data.preferences,
+            acceptedAll: data.acceptedAll,
+            updatedAt: now,
+          },
+          $setOnInsert: {
+            _id: randomUUID(),
+            timestamp: now,
+          }
+        },
+        { upsert: true, new: true }
+      );
+
+      return {
+        id: consent._id,
+        userId: consent.userId,
+        deviceId: consent.deviceId,
+        preferences: consent.preferences,
+        acceptedAll: consent.acceptedAll,
+        timestamp: consent.timestamp,
+        updatedAt: consent.updatedAt,
+      };
+    } catch (error) {
+      console.error('MongoDB saveCookieConsent error:', error);
+      throw new Error(`Failed to save cookie consent: ${error}`);
+    }
+  }
+
+  async getCookieConsent(userId: string | null, deviceId: string): Promise<any | null> {
+    try {
+      const { CookieConsent } = await import('./models/CookieConsent');
+
+      // Try to find by userId first, then by deviceId
+      let consent;
+      if (userId) {
+        consent = await CookieConsent.findOne({ userId });
+      }
+
+      if (!consent) {
+        consent = await CookieConsent.findOne({ deviceId, userId: null });
+      }
+
+      if (!consent) return null;
+
+      return {
+        id: consent._id,
+        userId: consent.userId,
+        deviceId: consent.deviceId,
+        preferences: consent.preferences,
+        acceptedAll: consent.acceptedAll,
+        timestamp: consent.timestamp,
+        updatedAt: consent.updatedAt,
+      };
+    } catch (error) {
+      console.error('MongoDB getCookieConsent error:', error);
+      return null;
+    }
+  }
+
+  async hasUserConsented(userId: string | null, deviceId: string, category?: string): Promise<boolean> {
+    try {
+      const consent = await this.getCookieConsent(userId, deviceId);
+
+      if (!consent) return false;
+
+      // If checking specific category
+      if (category) {
+        return consent.preferences[category] === true;
+      }
+
+      // If no category specified, check if user has made any choice
+      return true;
+    } catch (error) {
+      console.error('MongoDB hasUserConsented error:', error);
+      return false;
+    }
+  }
 }

@@ -132,35 +132,56 @@ export default function CreditsPopup({ isOpen, onClose }: CreditsPopupProps) {
                     {/* 3. Credits Usage Breakdown */}
                     <div>
                         <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">Cost Breakdown</h3>
-                        <div className="space-y-2">
-                            <div className="flex items-center justify-between p-3 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors border border-transparent hover:border-zinc-100 dark:hover:border-zinc-700">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-md text-blue-600 dark:text-blue-400">
-                                        <MessageSquare className="h-4 w-4" />
+                        <div className="space-y-3">
+                            {/* Ayurveda Gyaan */}
+                            <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-700">
+                                <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center gap-2">
+                                        <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-md text-blue-600 dark:text-blue-400">
+                                            <MessageSquare className="h-4 w-4" />
+                                        </div>
+                                        <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Ayurveda Gyaan</span>
                                     </div>
-                                    <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">New Chat</span>
+                                    <span className="text-xs font-bold bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-md">1 Credit</span>
                                 </div>
-                                <span className="text-xs font-bold bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded-md text-zinc-600 dark:text-zinc-400">2 credits</span>
+                                <div className="pl-9 space-y-1">
+                                    <p className="text-xs text-zinc-500 dark:text-zinc-400">• General Wellness Chat</p>
+                                    <p className="text-xs text-zinc-500 dark:text-zinc-400">• 1 Credit to start & per response</p>
+                                </div>
                             </div>
 
-                            <div className="flex items-center justify-between p-3 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors border border-transparent hover:border-zinc-100 dark:hover:border-zinc-700">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-1.5 bg-purple-100 dark:bg-purple-900/30 rounded-md text-purple-600 dark:text-purple-400">
-                                        <Bot className="h-4 w-4" />
+                            {/* Vaidya Chat */}
+                            <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-700">
+                                <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center gap-2">
+                                        <div className="p-1.5 bg-green-100 dark:bg-green-900/30 rounded-md text-green-600 dark:text-green-400">
+                                            <Zap className="h-4 w-4" />
+                                        </div>
+                                        <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Vaidya Chat</span>
                                     </div>
-                                    <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Bot Response</span>
+                                    <span className="text-xs font-bold bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2 py-1 rounded-md">5 Credits</span>
                                 </div>
-                                <span className="text-xs font-bold bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded-md text-zinc-600 dark:text-zinc-400">1 credit</span>
+                                <div className="pl-9 space-y-1">
+                                    <p className="text-xs text-zinc-500 dark:text-zinc-400">• Diagnostic Consultation</p>
+                                    <p className="text-xs text-zinc-500 dark:text-zinc-400">• Deep diagnostic loop & report</p>
+                                </div>
                             </div>
 
-                            <div className="flex items-center justify-between p-3 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors border border-transparent hover:border-zinc-100 dark:hover:border-zinc-700">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-1.5 bg-pink-100 dark:bg-pink-900/30 rounded-md text-pink-600 dark:text-pink-400">
-                                        <ImageIcon className="h-4 w-4" />
+                            {/* Drishti AI */}
+                            <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-700">
+                                <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center gap-2">
+                                        <div className="p-1.5 bg-purple-100 dark:bg-purple-900/30 rounded-md text-purple-600 dark:text-purple-400">
+                                            <ImageIcon className="h-4 w-4" />
+                                        </div>
+                                        <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Drishti AI</span>
                                     </div>
-                                    <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Image Generation</span>
+                                    <span className="text-xs font-bold bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-2 py-1 rounded-md">10 Credits</span>
                                 </div>
-                                <span className="text-xs font-bold bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded-md text-zinc-600 dark:text-zinc-400">5 credits</span>
+                                <div className="pl-9 space-y-1">
+                                    <p className="text-xs text-zinc-500 dark:text-zinc-400">• Visual Analysis (Tongue/Face)</p>
+                                    <p className="text-xs text-zinc-500 dark:text-zinc-400">• Visual health report</p>
+                                </div>
                             </div>
                         </div>
                     </div>

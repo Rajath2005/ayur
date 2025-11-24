@@ -58,6 +58,21 @@ export interface IStorage {
   createDrishtiAnalysis?(analysis: any): Promise<any>;
   getDrishtiAnalysis?(analysisId: string): Promise<any>;
   updateDrishtiAnalysis?(analysisId: string, updates: any): Promise<any>;
+
+  // Cookie Consent
+  saveCookieConsent?(data: {
+    userId: string | null;
+    deviceId: string;
+    preferences: {
+      essential: boolean;
+      analytics: boolean;
+      personalization: boolean;
+      ai_logs: boolean;
+    };
+    acceptedAll: boolean;
+  }): Promise<any>;
+  getCookieConsent?(userId: string | null, deviceId: string): Promise<any | null>;
+  hasUserConsented?(userId: string | null, deviceId: string, category?: string): Promise<boolean>;
 }
 
 // In-memory storage implementation
