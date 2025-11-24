@@ -14,6 +14,7 @@ import { UserDashboard } from "@/components/user-dashboard";
 import { MessageBubble } from "@/components/MessageBubble";
 import { TypingIndicator } from "@/components/TypingIndicator";
 import { ScrollToBottom } from "@/components/ScrollToBottom";
+import { SimulatedRAGProgress } from "@/components/SimulatedRAGProgress";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { queryClient } from "@/lib/queryClient";
@@ -439,7 +440,12 @@ export default function ChatPage() {
                       status={msg.id.startsWith('user-') && sendMessageMutation.isPending ? 'sending' : 'delivered'}
                     />
                   ))}
-                  {isTyping && <TypingIndicator />}
+                  {isTyping && (
+                    <>
+                      <SimulatedRAGProgress isVisible={isTyping} />
+                      <TypingIndicator />
+                    </>
+                  )}
                 </>
               )}
             </div>

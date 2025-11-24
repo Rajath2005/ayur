@@ -82,7 +82,7 @@ async function getWorkingModel(): Promise<string> {
   throw new Error("No compatible Gemini model found. Please check your API key.");
 }
 
-async function generate(prompt: string): Promise<string> {
+export async function generate(prompt: string): Promise<string> {
   try {
     console.log("\n🔄 Initializing Gemini model...");
 
@@ -166,6 +166,7 @@ export async function getChatResponse(
     .join("\n\n");
 
   let systemPrompt = "";
+  let retrievedContext = "";
 
   if (mode === 'VAIDYA') {
     systemPrompt = `You are Vaidya Chat, an advanced AI Ayurvedic Practitioner. Your goal is to conduct a thorough diagnostic consultation with the user to identify potential health imbalances (Vikriti) and suggest Ayurvedic remedies.
@@ -186,7 +187,54 @@ IMPORTANT:
 - Keep responses concise during the questioning phase.
 
 DISCLAIMER: Always imply or state that this is an AI analysis and not a substitute for professional medical advice.`;
+  } else if (mode === 'GYAAN') {
+    // Use advanced 10-step RAG pipeline with Pinecone
+    try {
+      const { executeRAGPipeline } = await import('./rag-pipeline.js');
+
+      console.log('🚀 Starting advanced RAG pipeline with Pinecone...');
+
+      const result = await executeRAGPipeline(
+        userMessage,
+        conversationHistory,
+        (event) => {
+          // Log progress events
+          console.log(`[Step ${event.step}] ${event.name}: ${event.message}${event.duration ? ` (${event.duration}ms)` : ''}`);
+        }
+      );
+
+      console.log(`✅ RAG pipeline completed in ${result.totalDuration}ms`);
+
+      return {
+        content: result.answer,
+      };
+    } catch (error: any) {
+      console.error('❌ RAG pipeline failed:', error.message);
+      console.log('⚠️ Falling back to simple mode');
+
+      // Fallback to simple Gemini response with enhanced prompt
+      systemPrompt = `You are AyuDost AI, an expert Ayurvedic wellness & lifestyle assistant.
+
+You have comprehensive knowledge of:
+- Ayurvedic principles (Tridosha theory, Prakriti, Vikriti)
+- Herbs and their properties (Ashwagandha, Turmeric, Triphala, etc.)
+- Ayurvedic treatments and remedies
+- Dinacharya (daily routines) and Ritucharya (seasonal routines)
+- Ayurvedic diet and nutrition
+- Classical Ayurvedic texts (Charaka Samhita, Sushruta Samhita, etc.)
+
+Guidelines:
+1. Provide accurate, detailed Ayurvedic information
+2. Explain concepts in simple, accessible language
+3. Include practical applications and remedies
+4. Always add safety disclaimers
+5. STRICT RULE: Only answer Ayurvedic questions. If the question is not related to Ayurveda, politely decline.
+6. Never provide medical diagnosis or replace professional medical advice.
+
+Your tone is friendly, encouraging, and holistic.`;
+    }
   } else {
+    // Legacy mode
     systemPrompt = `You are AyuDost AI, an Ayurvedic wellness & lifestyle assistant.
 You provide safe, general guidance based on Ayurvedic principles.
 You never provide medical diagnosis or replace professional medical advice.
