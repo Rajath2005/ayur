@@ -21,6 +21,71 @@ A modern fullstack web application providing personalized Ayurvedic wellness gui
 - **Data Storage**: PostgreSQL via Drizzle ORM (with in-memory fallback for local dev)
 - **AI**: Google Gemini 2.5 Flash/Pro
 
+## 🧠 AI Architecture & RAG Pipeline
+
+AyurDost uses an advanced **Retrieval-Augmented Generation (RAG)** pipeline to provide accurate, context-aware Ayurvedic guidance.
+
+### Workflow Diagram
+
+```mermaid
+graph TD
+    User([User]) -->|Sends Message| API[API Endpoint /api/chat]
+    API -->|Auth & Credits Check| Controller[Chat Controller]
+    Controller -->|Select Mode| ModeSwitch{Mode?}
+    
+    ModeSwitch -->|VAIDYA| Vaidya[Vaidya Diagnostic Flow]
+    ModeSwitch -->|LEGACY| Legacy[Simple Gemini Chat]
+    ModeSwitch -->|GYAAN| RAG[Advanced RAG Pipeline]
+    
+    subgraph "Advanced RAG Pipeline (10 Steps)"
+        RAG --> Step1[1. Domain Check]
+        Step1 -->|Is Ayurvedic?| CheckDomain{Yes/No}
+        CheckDomain -->|No| Reject[Refuse Query]
+        CheckDomain -->|Yes| Step2[2. Query Rewriting]
+        
+        Step2 --> Step3[3. Entity Extraction]
+        Step3 --> Step4[4. Generate Embeddings]
+        Step4 --> Step5[5. Dual Search]
+        
+        Step5 -->|Vector Search| Pinecone[(Pinecone DB)]
+        Step5 -->|Keyword Search| Mongo[(MongoDB)]
+        
+        Pinecone --> Step6[6. Context Ranking]
+        Mongo --> Step6
+        
+        Step6 --> Step7[7. Context Compression]
+        Step7 --> Step8[8. Gemini Generation]
+        Step8 --> Step9[9. Hallucination Check]
+        Step9 -->|Accurate?| CheckAcc{Yes/No}
+        
+        CheckAcc -->|No| Adjust[Minor Adjustments]
+        CheckAcc -->|Yes| Step10[10. Final Polish]
+        Adjust --> Step10
+    end
+    
+    Step10 --> Response[Final Answer]
+    Reject --> Response
+    Vaidya --> Response
+    Legacy --> Response
+    
+    Response -->|Save Message| DB[(Database)]
+    DB -->|Return Response| User
+```
+
+### The 10-Step RAG Process
+
+1.  **Domain Check**: Verifies if the query is related to Ayurveda using a fast LLM check.
+2.  **Query Rewriting**: Optimizes the user's query for better search retrieval (e.g., adding synonyms, clarifying intent).
+3.  **Entity Extraction**: Identifies key Ayurvedic terms (Herbs, Doshas, Symptoms) to boost search relevance.
+4.  **Embeddings**: Generates vector embeddings for the rewritten query.
+5.  **Dual Search**: Performs a hybrid search using **Pinecone** (semantic vector search) and **MongoDB** (keyword search) for maximum coverage.
+6.  **Context Ranking**: Ranks retrieved documents based on relevance scores.
+7.  **Context Compression**: Selects and compresses the most relevant information to fit within the LLM's context window.
+8.  **Gemini Generation**: Generates a comprehensive answer using the retrieved context and internal Ayurvedic knowledge.
+9.  **Hallucination Check**: Verifies that the generated answer is supported by the retrieved context to ensure accuracy.
+10. **Final Polish**: Formats the response, adds necessary disclaimers, and ensures a helpful tone.
+
+
 ## Quick Start
 
 ### Prerequisites
