@@ -1,29 +1,24 @@
-# ImageChat Implementation Plan
+Auto Rename Conversation Title Fix
 
-## ✅ Completed Tasks
-- [x] Analyze existing chat page layout and components
-- [x] Understand routing structure in App.tsx
-- [x] Review dashboard Upload Image button behavior
-- [x] Examine message schema for attachments support
-- [x] Create ImageChat.tsx page with same layout as chat.tsx
-- [x] Create ImageDropZone.tsx component for drag/drop upload
-- [x] Create ImageMessageBubble.tsx component for image display
-- [x] Create huggingFaceClient.ts for HuggingFace API integration
-- [x] Update App.tsx to add /image-chat route
-- [x] Update dashboard.tsx to navigate to /image-chat on Upload Image click
-- [x] Fix dashboard navigation to create new image chat session instead of /image-chat/new
-- [x] Add backend routes for image chat sessions (create, get, messages)
-- [x] Add image upload handling with multer
-- [x] Add image chat API endpoint with basic analysis placeholder
+- Context:
+  Current auto renaming backend logic only renames conversations if the title is "New Conversation" (text chat) or "Image Analysis Session" (image chat).
+  The app has multiple modes ('LEGACY', 'GYAAN', 'VAIDYA', 'DRISHTI') with different default conversation titles.
+  As a result, conversations in some modes (e.g. "Vaidya Consultation" mode or "New Chat" mode) are not renamed automatically on first message.
 
-## 🔄 In Progress Tasks
-- [ ] Integrate actual HuggingFace API for image analysis
+- Objective:
+  Fix the backend auto renaming logic to check for the default title based on conversation.mode.
+  Centralize mode to default title mapping.
+  Update /api/chat and /api/image-chat POST routes to auto rename conditionally.
 
-## 📋 Pending Tasks
-- [ ] Test image upload functionality
-- [ ] Verify HuggingFace API integration
-- [ ] Ensure proper error handling for uploads
-- [ ] Add progress bar for uploads (optional enhancement)
-- [ ] Add retry option if upload fails (optional enhancement)
-- [ ] Implement cloud storage for uploaded images (production)
-- [ ] Add image compression/optimization
+- Files to edit:
+  - server/routes.ts
+
+- Plan:
+  1. Add mapping of mode to default conversation title.
+  2. Replace current string literals in rename condition checks with mapping-based check.
+  3. Update auto rename logic in /api/chat and /api/image-chat handlers.
+  4. Test various modes for correct auto renaming behavior.
+
+- Followup:
+  - Test new conversation creation and first message sending in all modes.
+  - Verify frontend reflects updated titles after renaming.

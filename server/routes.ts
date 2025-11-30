@@ -9,6 +9,14 @@ import {
 import {
   getChatResponse
 } from "./gemini";
+
+// Mapping of modes to default conversation titles
+const defaultTitlesByMode: Record<string, string> = {
+  LEGACY: "New Conversation",
+  GYAAN: "New Chat",
+  VAIDYA: "Vaidya Consultation",
+  DRISHTI: "Image Analysis Session",
+};
 import { analyzeSymptoms, getHerbalRemedies, generateAppointmentContext } from "./ai-utils";
 import { verifyFirebaseToken, type AuthRequest } from "./middleware/verifyFirebaseToken";
 import { storage } from "./storage";
@@ -408,7 +416,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // 5. Update conversation title if it's the first message and title is "New Conversation"
-      if (history.length <= 1 && conversation.title === "New Conversation") {
+      const defaultTitle = defaultTitlesByMode[conversation.mode || 'LEGACY'] || "New Conversation";
+
+      if (history.length <= 1 && conversation.title === defaultTitle) {
         const title = content.slice(0, 50) + (content.length > 50 ? "..." : "");
         await storage.updateConversation(conversationId, { title, updatedAt: new Date() });
       } else {
