@@ -1,0 +1,62 @@
+[
+    {
+        "id": "remedy-cold-1",
+        "title": "Ayurvedic Home Remedies for Common Cold (Pratishyaya)",
+        "content": "In Ayurveda, a cold is often due to Kapha-Vata imbalance. \n\n**Remedies:**\n1. **Ginger Tea:** Boil 1 tsp grated ginger in water, add honey and lemon. Drink warm.\n2. **Tulsi (Holy Basil):** Chew 5-6 fresh leaves or drink Tulsi tea to boost immunity.\n3. **Turmeric Milk:** Drink warm milk with 1/2 tsp turmeric and a pinch of black pepper before bed.\n4. **Steam Inhalation:** Inhale steam with a few drops of eucalyptus oil or a pinch of carom seeds (Ajwain).\n5. **Diet:** Avoid cold, heavy, and dairy foods. Eat warm, light soups.",
+        "category": "remedies"
+    },
+    {
+        "id": "remedy-cough-1",
+        "title": "Ayurvedic Home Remedies for Cough (Kasa)",
+        "content": "Cough can be dry (Vata) or productive (Kapha). \n\n**Remedies:**\n1. **Honey & Black Pepper:** Mix 1 tsp honey with a pinch of black pepper powder. Lick slowly for dry cough.\n2. **Ginger & Jaggery:** Chew a small piece of ginger with jaggery to relieve throat irritation.\n3. **Clove:** Keep a clove in the mouth and suck on it to soothe the throat.\n4. **Licorice (Mulethi):** Drink licorice tea or chew on a small stick for persistent cough.\n5. **Turmeric:** Mix 1/2 tsp turmeric powder with 1 tsp honey. Take 3 times a day.",
+        "category": "remedies"
+    },
+    {
+        "id": "remedy-headache-1",
+        "title": "Ayurvedic Home Remedies for Headache (Shirashoola)",
+        "content": "Headaches can be Vata (throbbing), Pitta (burning), or Kapha (dull) type. \n\n**Remedies:**\n1. **Ginger Paste:** Apply a paste of dry ginger powder and water on the forehead for sinus/Kapha headaches.\n2. **Peppermint Oil:** Massage temples with a drop of peppermint oil for tension headaches.\n3. **Coriander Tea:** Drink coriander seed tea for Pitta (heat-related) headaches.\n4. **Warm Milk:** Drink warm milk with a pinch of cardamom for Vata headaches.\n5. **Nasya:** Put 2 drops of warm ghee in each nostril to clear sinuses.",
+        "category": "remedies"
+    },
+    {
+        "id": "remedy-indigestion-1",
+        "title": "Ayurvedic Home Remedies for Indigestion (Ajirna)",
+        "content": "Indigestion is caused by weak Agni (digestive fire). \n\n**Remedies:**\n1. **Ginger & Salt:** Chew a slice of fresh ginger with rock salt 10 mins before meals to ignite Agni.\n2. **Cumin Water:** Boil 1 tsp cumin seeds in water and drink warm throughout the day.\n3. **Fennel Seeds:** Chew 1 tsp fennel seeds after meals to aid digestion.\n4. **Ajwain (Carom Seeds):** Swallow 1/2 tsp ajwain with warm water for gas and bloating.\n5. **Buttermilk:** Drink fresh buttermilk with a pinch of roasted cumin and black salt after lunch.",
+        "category": "remedies"
+    },
+    {
+        "id": "remedy-acidity-1",
+        "title": "Ayurvedic Home Remedies for Acidity (Amla Pitta)",
+        "content": "Acidity is a Pitta imbalance. \n\n**Remedies:**\n1. **Fennel Water:** Soak fennel seeds overnight and drink the water in the morning.\n2. **Cold Milk:** Drink a cup of cold (room temp), sweetened milk to neutralize acid.\n3. **Coconut Water:** Drink tender coconut water to cool the stomach.\n4. **Coriander Water:** Boil coriander seeds, cool, and drink.\n5. **Avoid:** Spicy, sour, fried foods, coffee, and alcohol.",
+        "category": "remedies"
+    },
+    {
+        "id": "remedy-insomnia-1",
+        "title": "Ayurvedic Home Remedies for Insomnia (Anidra)",
+        "content": "Insomnia is often a Vata imbalance (excess movement in mind). \n\n**Remedies:**\n1. **Warm Milk:** Drink warm milk with a pinch of nutmeg (Jaiphal) before bed.\n2. **Foot Massage (Padabhyanga):** Massage soles of feet with warm sesame oil or ghee before sleep.\n3. **Ashwagandha:** Take 1/2 tsp Ashwagandha powder with warm milk.\n4. **Chamomile Tea:** Drink warm chamomile tea to relax.\n5. **Routine:** Stick to a regular sleep schedule and avoid screens 1 hour before bed.",
+        "category": "remedies"
+    },
+    {
+        "id": "remedy-joint-pain-1",
+        "title": "Ayurvedic Home Remedies for Joint Pain (Sandhi Shoola)",
+        "content": "Joint pain is often associated with Vata (dryness/air) or Ama (toxins). \n\n**Remedies:**\n1. **Oil Massage:** Massage painful joints with warm sesame oil or Mahanarayan oil.\n2. **Turmeric:** Take turmeric milk daily for inflammation.\n3. **Fenugreek:** Soak 1 tsp fenugreek seeds overnight and eat them in the morning.\n4. **Ginger:** Drink ginger tea or apply ginger paste to reduce swelling.\n5. **Castor Oil:** Take 1 tsp castor oil with warm milk at night (consult a Vaidya first) to remove Ama.",
+        "category": "remedies"
+    },
+    {
+        "id": "remedy-acne-1",
+        "title": "Ayurvedic Home Remedies for Acne (Yauvan Pidika)",
+        "content": "Acne is primarily a Pitta and Rakta (blood) impurity issue. \n\n**Remedies:**\n1. **Neem:** Apply neem leaf paste or wash face with neem water.\n2. **Turmeric & Sandalwood:** Apply a paste of turmeric and sandalwood powder with rose water.\n3. **Aloe Vera:** Apply fresh aloe vera gel to soothe inflammation.\n4. **Triphala:** Take Triphala powder internally to detoxify the blood.\n5. **Diet:** Avoid spicy, oily, fried foods and excessive sugar.",
+        "category": "remedies"
+    },
+    {
+        "id": "remedy-hair-loss-1",
+        "title": "Ayurvedic Home Remedies for Hair Loss (Khalitya)",
+        "content": "Hair loss involves Pitta (heat) and Vata (dryness). \n\n**Remedies:**\n1. **Bhringraj Oil:** Massage scalp with Bhringraj oil 2-3 times a week.\n2. **Amla (Indian Gooseberry):** Eat fresh Amla or apply Amla powder paste to scalp.\n3. **Coconut Oil & Curry Leaves:** Boil curry leaves in coconut oil and use for massage.\n4. **Aloe Vera:** Apply gel to scalp to reduce heat and dandruff.\n5. **Stress Management:** Practice Shirodhara or meditation to reduce stress-induced hair fall.",
+        "category": "remedies"
+    },
+    {
+        "id": "remedy-constipation-1",
+        "title": "Ayurvedic Home Remedies for Constipation (Vibandha)",
+        "content": "Constipation is a classic Vata disorder (dryness in colon). \n\n**Remedies:**\n1. **Triphala:** Take 1 tsp Triphala powder with warm water before bed.\n2. **Warm Water:** Drink a glass of warm water first thing in the morning.\n3. **Ghee:** Add 1 tsp ghee to a cup of warm milk at night.\n4. **Raisins:** Soak 10-15 raisins overnight and eat them in the morning.\n5. **Fiber:** Increase intake of cooked vegetables and whole grains.",
+        "category": "remedies"
+    }
+]

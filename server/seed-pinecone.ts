@@ -43,8 +43,13 @@ console.log('🚀 Initializing Pinecone Data Seeder...\n');
 const pinecone = new Pinecone({ apiKey: PINECONE_API_KEY });
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+const homeRemedies = require("./data/home_remedies.json");
+
 // Sample Ayurvedic knowledge base
 const ayurvedicKnowledge = [
+    ...homeRemedies,
     {
         id: 'ayurveda-intro-1',
         title: 'What is Ayurveda?',

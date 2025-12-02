@@ -208,7 +208,24 @@ export async function executeRAGPipeline(
 
 async function checkDomain(query: string): Promise<boolean> {
     // Use Gemini for fast domain classification
-    const prompt = `Is this query related to Ayurveda? Answer only "yes" or "no".\n\nQuery: ${query}`;
+    const prompt = `You are a domain classifier for an Ayurvedic health bot.
+    
+    Determine if the following query is appropriate for an Ayurvedic AI assistant.
+    
+    APPROPRIATE TOPICS (Answer "yes"):
+    - Ayurveda, Doshas, Prakriti, Herbs
+    - General health issues, symptoms, diseases (e.g., "cold", "headache", "diabetes")
+    - Diet, nutrition, lifestyle, yoga, meditation
+    - Home remedies, natural healing
+    
+    INAPPROPRIATE TOPICS (Answer "no"):
+    - Politics, Technology, Coding, Math, General Knowledge (e.g., "Who is the president?", "Write python code")
+    - Specific modern medical advice requiring a doctor (e.g., "dosage of antibiotics", "interpret my MRI", "surgery details")
+    - Entertainment, Sports, Finance
+    
+    Query: ${query}
+    
+    Answer only "yes" or "no".`;
     const response = await generate(prompt);
     return response.toLowerCase().includes('yes');
 }
@@ -277,6 +294,8 @@ Rules:
 4. NEVER invent non-Ayurvedic content. 
 5. ALWAYS answer with correct Ayurvedic principles (herbs, doshas, tridosha theory, classical knowledge).
 6. If user asks non-Ayurvedic → politely refuse with: "I'm AyuDost AI, specialized in Ayurvedic wellness. I can only answer questions related to Ayurveda."
+7. STRICTLY REFUSE to answer questions about politics, technology, coding, general knowledge, or modern medical prescriptions.
+8. If the user asks a general health question (e.g., "headache"), answer it using AYURVEDIC principles (e.g., "In Ayurveda, headaches are often due to...").
 
 Answer structure:
 - Clear explanation
@@ -297,7 +316,7 @@ Use your comprehensive internal Ayurvedic knowledge to provide a detailed answer
 ${historyContext ? `=== CONVERSATION HISTORY ===\n${historyContext}\n=== END OF HISTORY ===\n\n` : ''}=== USER QUESTION ===
 ${query}
 
-Provide your answer now:`
+Provide your answer now. Ensure you complete your thoughts and do not stop mid-sentence:`
 
     return await generate(prompt);
 }
